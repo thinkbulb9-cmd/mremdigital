@@ -21,17 +21,17 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   }
   if(item.ext==='.pdf'){
    const pdf=makeDemoPdf();
-   return new Response(pdf,{headers:{
+   return new Response(pdf.buffer as ArrayBuffer,{headers:{
     'Content-Type':'application/pdf',
     'Content-Disposition':`${inline?'inline':'attachment'}; filename="MREM-Demo-Notes.pdf"`,
     'Content-Length':String(pdf.byteLength),
     'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'
    }});
   }
-  const content='MREM DIGITAL LIBRARY - DEMO RESOURCE ONLY\\n\\n'+item.name+'\\n\\n'+item.content+'\\n\\nNo real NPTEL resources or college files are attached.\\n';
+  const content='MREM DIGITAL LIBRARY - DEMO RESOURCE ONLY\n\n'+item.name+'\n\n'+item.content+'\n\nNo real NPTEL resources or college files are attached.\n';
   return new Response(content,{headers:{
    'Content-Type':'text/plain; charset=utf-8',
-   'Content-Disposition':`${inline?'inline':'attachment'}; filename="${item.name.replace(/["\\\\\\r\\n]/g,'_')}"`,
+   'Content-Disposition':`${inline?'inline':'attachment'}; filename="${item.name.replace(/[^a-zA-Z0-9_. -]/g,'_')}"`,
    'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'
   }});
  }
