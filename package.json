@@ -1,0 +1,33 @@
+{
+  "name": "mrem-digital-library-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1",
+    "db:init": "node --env-file=.env.local scripts/init-db.mjs",
+    "storage:add": "node --env-file=.env.local scripts/register-storage.mjs",
+    "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
+    "scan": "node --env-file=.env.local scripts/scan.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "pg": "^8.16.3",
+    "server-only": "0.0.1",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/pg": "^8.15.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

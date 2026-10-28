@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mrem
+      POSTGRES_PASSWORD: mrem_local_only
+      POSTGRES_DB: mrem_library
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - mrem_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+volumes:
+  mrem_pg_data:
