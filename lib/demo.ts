@@ -10,7 +10,9 @@ export const previewFiles:DemoEntry[]=[
   {id:'7',name:'Data Structures - Study Guide.txt',ext:'.txt',kind:'Document',department:'Computer Science',course:'Data Structures',size_bytes:'1500',modified_at:'2026-10-20',source_id:'preview-only',content:'Data Structures — demonstration study guide.'},
   {id:'8',name:'Computer Networks - Model Questions.txt',ext:'.txt',kind:'Document',department:'Computer Science',course:'Computer Networks',size_bytes:'1000',modified_at:'2026-10-20',source_id:'preview-only',content:'Computer Networks — synthetic model questions.'},
   {id:'9',name:'Machine Learning - Introduction.txt',ext:'.txt',kind:'Document',department:'Artificial Intelligence & ML',course:'Machine Learning',size_bytes:'2400',modified_at:'2026-10-20',source_id:'preview-only',content:'Machine Learning — synthetic introductory notes, no external media.'},
-  {id:'10',name:'Neural Networks - Sample Notes.txt',ext:'.txt',kind:'Document',department:'Artificial Intelligence & ML',course:'Neural Networks',size_bytes:'2100',modified_at:'2026-10-20',source_id:'preview-only',content:'Neural Networks — synthetic teaching resource.'}
+  {id:'10',name:'Neural Networks - Sample Notes.txt',ext:'.txt',kind:'Document',department:'Artificial Intelligence & ML',course:'Neural Networks',size_bytes:'2100',modified_at:'2026-10-20',source_id:'preview-only',content:'Neural Networks — synthetic teaching resource.'},
+  {id:'11',name:'Video Lecture Sample.mp4',ext:'.mp4',kind:'Video',department:'Computer Science',course:'Data Structures',size_bytes:'2036',modified_at:'2026-10-20',source_id:'preview-only',content:'Original synthetic 2-second MREM sample video.'},
+  {id:'12',name:'NPTEL Notes Preview Sample.pdf',ext:'.pdf',kind:'Document',department:'Mechanical Engineering',course:'Thermodynamics',size_bytes:'700',modified_at:'2026-10-20',source_id:'preview-only',content:'Synthetic PDF test document generated for the portal demonstration.'}
 ];
 export function demoCatalogue(params:URLSearchParams){
  const q=(params.get('q')||'').trim().toLowerCase();
@@ -26,3 +28,23 @@ export function demoCatalogue(params:URLSearchParams){
  courses:[...new Set(previewFiles.filter(f=>f.department===department).map(f=>f.course))].sort()};
 }
 export const demoEnabled=()=>process.env.MREM_DEMO_PREVIEW==='enabled'&&process.env.VERCEL==='1';
+
+/** Tiny generated PDF fixture for preview smoke tests — no real NPTEL files. */
+export function makeDemoPdf():Uint8Array{
+ const commands='BT /F1 22 Tf 60 720 Td (MREM Digital Library) Tj 0 -32 Td /F1 12 Tf (Sample PDF document - DEMO ONLY) Tj 0 -24 Td (No college or NPTEL content is included.) Tj ET';
+ const objects=[
+  '<< /Type /Catalog /Pages 2 0 R >>',
+  '<< /Type /Pages /Count 1 /Kids [3 0 R] >>',
+  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  `<< /Length ${Buffer.byteLength(commands,'ascii')} >>\nstream\n${commands}\nendstream`
+ ];
+ let out='%PDF-1.4\n';
+ const offsets:number[]=[0];
+ for(let i=0;i<objects.length;i++){offsets.push(Buffer.byteLength(out,'ascii'));out+=`${i+1} 0 obj\n${objects[i]}\nendobj\n`;}
+ const xref=Buffer.byteLength(out,'ascii');
+ out+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+ for(const offset of offsets.slice(1))out+=`${String(offset).padStart(10,'0')} 00000 n \n`;
+ out+=`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+ return new Uint8Array(Buffer.from(out,'ascii'));
+}

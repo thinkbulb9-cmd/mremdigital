@@ -134,3 +134,8 @@ This is a **Node.js/Next.js** project, not PHP. **XAMPP is not needed**. You may
 ## Vercel protected demonstration
 
 This repository is linked to the `mremdigital` Vercel project. All deployments must remain behind Vercel Authentication. Set `MREM_DEMO_PREVIEW=enabled` on Vercel to show **synthetic text resources only**, with no real database, disk mounts or NPTEL assets. This flag is intentionally scoped to Vercel runtime (`VERCEL=1`) to prevent bypassing local application authentication. **Do not remove Vercel deployment protection while the demo flag is enabled.** For an actual college server, remove the demo variable, set separate strong local application credentials and PostgreSQL URL, configure read-only disk mounts, and run the scanner. The Vercel demo does not serve the 90 TB archive.
+
+
+## Video previews and document downloads
+
+Play supports HTML5-compatible MP4/M4V and WebM files. PDF, TXT, Markdown, PNG, JPEG, and WebP can be previewed in-browser. All indexed documents (including DOCX/PPTX/ZIP) have an attachment download action; unsupported browser formats are download-only. The local Node.js file-serving route supports validated byte-range requests for video seeking, handles authorization, and resolves paths within registered storage sources. Vercel's protected demonstration contains a tiny original sample MP4 and a generated sample PDF, with no real NPTEL content or access to attached drives. Production streaming must run on the on-campus server and be load-tested before exposing large video files.

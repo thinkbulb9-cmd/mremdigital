@@ -4,7 +4,7 @@ import { Readable } from 'node:stream';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { mimeFor, resolveStoredFile } from '@/lib/storage';
-import { previewFiles, demoEnabled } from '@/lib/demo';
+import { previewFiles, demoEnabled, makeDemoPdf } from '@/lib/demo';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}){
@@ -14,8 +14,26 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
  if(demoEnabled()){
   const item=previewFiles.find(f=>f.id===id);
   if(!item)return new Response('Not found',{status:404});
-  const content='MREM DIGITAL LIBRARY — DEMO RESOURCE ONLY\n\n'+item.name+'\n\n'+item.content+'\n\nNo real NPTEL resources or university files are attached to this preview.\n';
-  return new Response(content,{headers:{'Content-Type':'text/plain; charset=utf-8','Content-Disposition':`attachment; filename="${item.name}"`,'Cache-Control':'private, no-store'}});
+  const inline=req.nextUrl.searchParams.get('inline')==='1';
+  if(item.kind==='Video'){
+   // The synthetic sample is a tiny, original MP4 committed in public/demo.
+   return NextResponse.redirect(new URL('/demo/mrem-preview.mp4',req.url),307);
+  }
+  if(item.ext==='.pdf'){
+   const pdf=makeDemoPdf();
+   return new Response(pdf,{headers:{
+    'Content-Type':'application/pdf',
+    'Content-Disposition':`${inline?'inline':'attachment'}; filename="MREM-Demo-Notes.pdf"`,
+    'Content-Length':String(pdf.byteLength),
+    'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'
+   }});
+  }
+  const content='MREM DIGITAL LIBRARY - DEMO RESOURCE ONLY\\n\\n'+item.name+'\\n\\n'+item.content+'\\n\\nNo real NPTEL resources or college files are attached.\\n';
+  return new Response(content,{headers:{
+   'Content-Type':'text/plain; charset=utf-8',
+   'Content-Disposition':`${inline?'inline':'attachment'}; filename="${item.name.replace(/["\\\\\\r\\n]/g,'_')}"`,
+   'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'
+  }});
  }
 
  const q=await db().query(`SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
@@ -36,7 +54,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end>=size||start>end)
    return new Response('Range Not Satisfiable',{status:416,headers:{'Content-Range':`bytes */${size}`}});
  }
- const inline=req.nextUrl.searchParams.get('inline')==='1' && ['.mp4','.webm','.m4v','.pdf','.txt'].includes(file.ext);
+ const inline=req.nextUrl.searchParams.get('inline')==='1' && ['.mp4','.webm','.m4v','.pdf','.txt','.md','.png','.jpg','.jpeg','.webp'].includes(file.ext);
  const safeFilename=String(file.name).replace(/[\r\n"\\]/g,'_');
  const headers:Record<string,string>={
   'Content-Type':mimeFor(file.ext),

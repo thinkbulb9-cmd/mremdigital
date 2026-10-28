@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Archive, BookOpen, ChevronRight, Clapperboard, Download, File, FileText, FolderOpen, GraduationCap, HardDrive, LayoutDashboard, LogOut, Search, ShieldCheck, SlidersHorizontal, Video } from 'lucide-react';
+import ResourcePreview from './ResourcePreview';
+import { Archive, BookOpen, ChevronRight, Download, Eye, Play, File, FileText, FolderOpen, GraduationCap, HardDrive, LayoutDashboard, LogOut, Search, ShieldCheck, SlidersHorizontal, Video } from 'lucide-react';
 type Entry={id:string,name:string,ext:string,kind:string,department:string,course:string,size_bytes:string,modified_at:string,source_id:string};
 type Api={items:Entry[],total:number,page:number,limit:number,departments:{department:string,total:string}[],courses:string[]};
 const empty:Api={items:[],total:0,page:1,limit:30,departments:[],courses:[]};
@@ -38,11 +39,22 @@ export default function Library({previewMode=false}:{previewMode?:boolean}){
   <section className="searchPanel"><div className="searchLine"><Search size={21}/><input aria-label="Search files" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Search lectures, filenames, subjects, or course resources..."/><span className="kbd">SEARCH</span></div><div className="filterRow"><SlidersHorizontal size={17}/><span>Filters</span><select aria-label="Resource type" value={kind} onChange={e=>{setKind(e.target.value);setPage(1)}}><option value="">All file types</option><option value="Video">Videos</option><option value="Document">Documents</option><option value="Archive">Archives</option><option value="Other">Other</option></select><select aria-label="Department" value={department} onChange={e=>chooseDepartment(e.target.value)}><option value="">All departments</option>{data.departments.map(d=><option key={d.department} value={d.department}>{d.department}</option>)}</select><select aria-label="Course" value={course} onChange={e=>{setCourse(e.target.value);setPage(1)}} disabled={!department}><option value="">All courses</option>{data.courses.map(c=><option key={c} value={c}>{c}</option>)}</select></div></section>
   <div className="sectionHeader"><div><div className="eyebrow">RESOURCE CATALOGUE</div><h2>{department||'All learning materials'}</h2><p>{data.total.toLocaleString()} indexed resources {department?`in ${department}`:'across available drives'}</p></div><span className="readOnly"><ShieldCheck size={16}/> Read-only access</span></div>
   <div className="tableWrap"><div className="tableHead"><span>RESOURCE NAME</span><span>COURSE</span><span>TYPE</span><span>SIZE</span><span>ACTIONS</span></div>
-   {loading?<div className="emptyState">Loading the resource catalogue...</div>:error?<div className="emptyState error">{error}</div>:data.items.length===0?<div className="emptyState"><FolderOpen size={35}/><strong>No files found</strong><span>Try clearing filters or run the indexing worker to load resources.</span></div>:data.items.map(item=><div className="resourceRow" key={item.id}><div className="resourceName"><div className={`resourceIcon ${item.kind.toLowerCase()}`}>{iconFor(item.kind)}</div><div className="resourceText"><strong title={item.name}>{item.name}</strong><small>{item.department} · {item.source_id}</small></div></div><span className="courseText">{item.course}</span><span><span className="typePill">{item.kind}</span></span><span className="sizeText">{size(item.size_bytes)}</span><span className="actionBtns">{['Video','Document'].includes(item.kind)&&['.mp4','.webm','.m4v','.pdf','.txt','.md'].includes(item.ext)&&<button title="Preview" className="iconButton" onClick={()=>setPreview(item)}><Clapperboard size={17}/></button>}<a aria-label={'Download '+item.name} title="Download file" className="downloadButton" href={`/api/files/${item.id}/download`}><Download size={17}/></a></span></div>)}
+   {loading?<div className="emptyState">Loading the resource catalogue...</div>:error?<div className="emptyState error">{error}</div>:data.items.length===0?<div className="emptyState"><FolderOpen size={35}/><strong>No files found</strong><span>Try clearing filters or run the indexing worker to load resources.</span></div>:data.items.map(item=><div className="resourceRow" key={item.id}><div className="resourceName"><div className={`resourceIcon ${item.kind.toLowerCase()}`}>{iconFor(item.kind)}</div><div className="resourceText"><strong title={item.name}>{item.name}</strong><small>{item.department} · {item.source_id}</small></div></div><span className="courseText">{item.course}</span><span><span className="typePill">{item.kind}</span></span><span className="sizeText">{size(item.size_bytes)}</span><span className="actionBtns">
+   {['.mp4','.m4v','.webm','.pdf','.txt','.md','.png','.jpg','.jpeg','.webp'].includes(item.ext.toLowerCase())&&
+     <button type="button" aria-label={'Preview '+item.name} title={'Preview '+item.name}
+       className="previewAction" onClick={()=>setPreview(item)}>
+       {item.kind==='Video'?<Play size={15}/>:<Eye size={15}/>}<span>{item.kind==='Video'?'Play':'Preview'}</span>
+     </button>}
+   <a aria-label={'Download '+item.name} title={'Download '+item.name} className="downloadAction"
+      href={previewMode&&item.kind==='Video'?'/demo/mrem-preview.mp4':`/api/files/${item.id}/download`}
+      download={previewMode&&item.kind==='Video'?item.name:undefined}>
+      <Download size={15}/><span>Download</span>
+   </a>
+  </span></div>)}
   </div>
   <div className="pagination"><span>Page {page} of {totalPages}</span><div><button disabled={page<=1} onClick={()=>setPage(p=>p-1)}>Previous</button><button disabled={page>=totalPages} onClick={()=>setPage(p=>p+1)}>Next</button></div></div>
   <footer>© MREM Digital Library — Pilot architecture · Educational access only</footer>
  </main>
- {preview&&<div className="modalShade" role="presentation" onClick={()=>setPreview(null)}><div className="modal" role="dialog" aria-modal="true" aria-label="Resource Preview" onClick={e=>e.stopPropagation()}><div className="modalHeader"><strong>{preview.name}</strong><button className="textBtn" onClick={()=>setPreview(null)}>Close ×</button></div>{preview.kind==='Video'?<video controls preload="metadata" src={`/api/files/${preview.id}/download?inline=1`} />:preview.ext==='.pdf'?<iframe title={preview.name} src={`/api/files/${preview.id}/download?inline=1`}/>:<iframe title={preview.name} src={`/api/files/${preview.id}/download?inline=1`}/>}<a className="primary" href={`/api/files/${preview.id}/download`}>Download original file</a></div></div>}
+ {preview&&<ResourcePreview file={preview} previewMode={previewMode} onClose={()=>setPreview(null)}/>}
  </div>;
 }
