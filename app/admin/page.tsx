@@ -2,10 +2,12 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { demoEnabled,previewFiles } from '@/lib/demo';
 import { HardDrive, Database, FolderOpen, FileText, ArrowLeft, Activity } from 'lucide-react';
 export const dynamic='force-dynamic';
 export default async function Admin(){
  if(!(await authorized()))redirect('/login');
+ if(demoEnabled())return <main className="adminPage"><Link href="/" className="backLink"><ArrowLeft size={16}/> Back to Library</Link><div className="eyebrow">DEMO PREVIEW</div><h1>Storage & Indexing Overview</h1><p className="muted">This protected Vercel preview shows sample content only. Storage drives and real scan jobs cannot be accessed from Vercel.</p><div className="statGrid"><div className="statCard"><FileText/><span>Example records</span><strong>{previewFiles.length}</strong></div><div className="statCard"><HardDrive/><span>Actual disks connected</span><strong>0</strong></div><div className="statCard"><FolderOpen/><span>Sample departments</span><strong>5</strong></div><div className="statCard"><Activity/><span>Local scan jobs</span><strong>Not connected</strong></div></div><div className="notice">To index the college's 90 TB library, deploy this application and its PostgreSQL metadata database on an authorized on-campus server with read-only mounted folders. Disable MREM_DEMO_PREVIEW there.</div></main>;
  const [sources,summary,jobs]=await Promise.all([
   db().query(`SELECT s.id,s.name,s.root_path,s.enabled,s.last_successful_scan, count(r.id) AS resources FROM storage_sources s LEFT JOIN resources r ON r.source_id=s.id GROUP BY s.id ORDER BY s.id`),
   db().query(`SELECT count(*) AS files,coalesce(sum(size_bytes),0) AS bytes,count(distinct department) AS departments FROM resources WHERE availability='available'`),

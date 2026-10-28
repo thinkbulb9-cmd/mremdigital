@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { demoCatalogue, demoEnabled } from '@/lib/demo';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest){
  if(!(await authorized()))return NextResponse.json({error:'Unauthorized'},{status:401});
+ if(demoEnabled())return NextResponse.json(demoCatalogue(req.nextUrl.searchParams));
  const p=req.nextUrl.searchParams;
  const q=(p.get('q')||'').trim().slice(0,120);
  const department=(p.get('department')||'').slice(0,140);
@@ -15,7 +17,7 @@ export async function GET(req:NextRequest){
  const terms:string[]=["r.availability='available'","s.enabled=TRUE"];
  const args:unknown[]=[];
  function add(clause:string,value:string){args.push(value);terms.push(clause.replaceAll('?',`$${args.length}`));}
- if(q)add('r.name ILIKE ? ESCAPE \'\\\'','%'+q.replaceAll(/[\\%_]/g,m=>'\\'+m)+'%');
+ if(q)add('r.name ILIKE ?','%'+q.replaceAll(/[\\%_]/g,m=>'\\'+m)+'%');
  if(department)add('r.department=?',department);
  if(course)add('r.course=?',course);
  if(kind)add('r.kind=?',kind);

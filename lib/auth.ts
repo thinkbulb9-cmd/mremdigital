@@ -22,5 +22,9 @@ export function checkSession(token:string|undefined){
  if(Number(parts[0])<Date.now()/1000)return false;
  return secureEqual(parts[1],sign(parts[0]));
 }
-export async function authorized(){return checkSession((await cookies()).get(COOKIE)?.value);}
+export async function authorized(){
+ // Vercel team authentication protects all demo deployments; never bypass login on the local storage server.
+ if(process.env.MREM_DEMO_PREVIEW==='enabled'&&process.env.VERCEL==='1')return true;
+ return checkSession((await cookies()).get(COOKIE)?.value);
+}
 export function cookieName(){return COOKIE;}

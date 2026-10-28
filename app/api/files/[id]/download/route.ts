@@ -4,12 +4,20 @@ import { Readable } from 'node:stream';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { mimeFor, resolveStoredFile } from '@/lib/storage';
+import { previewFiles, demoEnabled } from '@/lib/demo';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}){
  if(!(await authorized()))return new Response('Unauthorized',{status:401});
  const {id}=await context.params;
  if(!/^\d+$/.test(id))return new Response('Bad file ID',{status:400});
+ if(demoEnabled()){
+  const item=previewFiles.find(f=>f.id===id);
+  if(!item)return new Response('Not found',{status:404});
+  const content='MREM DIGITAL LIBRARY — DEMO RESOURCE ONLY\n\n'+item.name+'\n\n'+item.content+'\n\nNo real NPTEL resources or university files are attached to this preview.\n';
+  return new Response(content,{headers:{'Content-Type':'text/plain; charset=utf-8','Content-Disposition':`attachment; filename="${item.name}"`,'Cache-Control':'private, no-store'}});
+ }
+
  const q=await db().query(`SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
  if(!q.rows[0])return new Response('Not found',{status:404});

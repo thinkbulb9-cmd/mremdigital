@@ -130,3 +130,7 @@ Students -> HTTPS NGINX -> Next.js portal & REST APIs -> PostgreSQL catalogue
 ## Important note on XAMPP
 
 This is a **Node.js/Next.js** project, not PHP. **XAMPP is not needed**. You may use PostgreSQL + Next.js on Windows or Linux, behind a reverse proxy. Don't try to install the code into XAMPP's `htdocs` like a Joomla/PHP application.
+
+## Vercel protected demonstration
+
+This repository is linked to the `mremdigital` Vercel project. All deployments must remain behind Vercel Authentication. Set `MREM_DEMO_PREVIEW=enabled` on Vercel to show **synthetic text resources only**, with no real database, disk mounts or NPTEL assets. This flag is intentionally scoped to Vercel runtime (`VERCEL=1`) to prevent bypassing local application authentication. **Do not remove Vercel deployment protection while the demo flag is enabled.** For an actual college server, remove the demo variable, set separate strong local application credentials and PostgreSQL URL, configure read-only disk mounts, and run the scanner. The Vercel demo does not serve the 90 TB archive.
