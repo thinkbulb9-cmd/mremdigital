@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { demoCatalogue, demoEnabled } from '@/lib/demo';
+import { isMacPilot, macPilotCatalogue } from '@/lib/mac-pilot';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest){
  if(!(await authorized()))return NextResponse.json({error:'Unauthorized'},{status:401});
  if(demoEnabled())return NextResponse.json(demoCatalogue(req.nextUrl.searchParams));
+ if(isMacPilot())return NextResponse.json(await macPilotCatalogue(req.nextUrl.searchParams));
  const p=req.nextUrl.searchParams;
  const q=(p.get('q')||'').trim().slice(0,120);
  const department=(p.get('department')||'').slice(0,140);

@@ -5,6 +5,7 @@ import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { mimeFor, resolveStoredFile } from '@/lib/storage';
 import { previewFiles, demoEnabled, makeDemoPdf } from '@/lib/demo';
+import { isMacPilot, getMacPilotFile } from '@/lib/mac-pilot';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}){
@@ -36,10 +37,15 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   }});
  }
 
- const q=await db().query(`SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
+ let file: {name:string;ext:string;root_path:string;rel_path:string}|null;
+ if(isMacPilot()){
+  file=await getMacPilotFile(id);
+ }else{
+  const q=await db().query(`SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
- if(!q.rows[0])return new Response('Not found',{status:404});
- const file=q.rows[0];
+  file=q.rows[0]||null;
+ }
+ if(!file)return new Response('Not found',{status:404});
  let absolute:string,size:number;
  try{({absolute,size}=await resolveStoredFile(file.root_path,file.rel_path));}
  catch{return new Response('File unavailable on attached storage',{status:404});}
@@ -54,7 +60,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end>=size||start>end)
    return new Response('Range Not Satisfiable',{status:416,headers:{'Content-Range':`bytes */${size}`}});
  }
- const inline=req.nextUrl.searchParams.get('inline')==='1' && ['.mp4','.webm','.m4v','.pdf','.txt','.md','.png','.jpg','.jpeg','.webp'].includes(file.ext);
+ const inline=req.nextUrl.searchParams.get('inline')==='1' && ['.mp4','.webm','.m4v','.mov','.pdf','.txt','.md','.png','.jpg','.jpeg','.webp'].includes(file.ext);
  const safeFilename=String(file.name).replace(/[\r\n"\\]/g,'_');
  const headers:Record<string,string>={
   'Content-Type':mimeFor(file.ext),
@@ -63,7 +69,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   'Accept-Ranges':'bytes','X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'
  };
  if(range)headers['Content-Range']=`bytes ${start}-${end}/${size}`;
- db().query('INSERT INTO download_events(resource_id,range_request) VALUES($1,$2)',[id,Boolean(range)]).catch(()=>{});
+ if(!isMacPilot())db().query('INSERT INTO download_events(resource_id,range_request) VALUES($1,$2)',[id,Boolean(range)]).catch(()=>{});
  if(size===0)return new Response(null,{status:200,headers});
  return new Response(Readable.toWeb(createReadStream(absolute,{start,end})) as ReadableStream<Uint8Array>,
     {status:range?206:200,headers});

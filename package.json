@@ -10,7 +10,8 @@
     "storage:add": "node --env-file=.env.local scripts/register-storage.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
     "scan": "node --env-file=.env.local scripts/scan.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "mac:video-test": "bash scripts/mac-video-test.sh"
   },
   "dependencies": {
     "next": "16.4.3",

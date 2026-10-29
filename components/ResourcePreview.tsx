@@ -6,7 +6,7 @@ type Resource = { id:string; name:string; ext:string; kind:string; course:string
 export default function ResourcePreview({file,previewMode,onClose}:{file:Resource;previewMode:boolean;onClose:()=>void}){
  const [failed,setFailed]=useState(false);
  const type=file.ext.toLowerCase();
- const video=['.mp4','.m4v','.webm'].includes(type);
+ const video=['.mp4','.m4v','.webm','.mov'].includes(type);
  const pdf=type==='.pdf';
  const text=['.txt','.md'].includes(type);
  const image=['.png','.jpg','.jpeg','.webp'].includes(type);

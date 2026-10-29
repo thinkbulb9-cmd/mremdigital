@@ -15,7 +15,7 @@ export async function resolveStoredFile(root:string, relative:string){
  return {absolute:realFile,size:stat.size};
 }
 export const mimeFor=(ext:string):string=>({
- '.pdf':'application/pdf','.mp4':'video/mp4','.m4v':'video/mp4','.webm':'video/webm',
+ '.pdf':'application/pdf','.mp4':'video/mp4','.m4v':'video/mp4','.webm':'video/webm','.mov':'video/quicktime',
  '.txt':'text/plain; charset=utf-8','.md':'text/plain; charset=utf-8',
  '.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  '.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation',

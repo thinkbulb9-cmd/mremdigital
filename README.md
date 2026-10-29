@@ -139,3 +139,8 @@ This repository is linked to the `mremdigital` Vercel project. All deployments m
 ## Video previews and document downloads
 
 Play supports HTML5-compatible MP4/M4V and WebM files. PDF, TXT, Markdown, PNG, JPEG, and WebP can be previewed in-browser. All indexed documents (including DOCX/PPTX/ZIP) have an attachment download action; unsupported browser formats are download-only. The local Node.js file-serving route supports validated byte-range requests for video seeking, handles authorization, and resolves paths within registered storage sources. Vercel's protected demonstration contains a tiny original sample MP4 and a generated sample PDF, with no real NPTEL content or access to attached drives. Production streaming must run on the on-campus server and be load-tested before exposing large video files.
+
+
+## macOS video playback from an external/local disk
+
+See [MAC_VIDEO_TEST.md](MAC_VIDEO_TEST.md) for the one-folder, zero-database local Mac test procedure. The Mac pilot is *only* enabled for `NODE_ENV=development`, with a configured `MREM_MAC_PILOT_ROOT`, and never on Vercel. It lists and streams a bounded number of files from that folder without copying any media.
