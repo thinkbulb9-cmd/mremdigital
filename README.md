@@ -144,3 +144,8 @@ Play supports HTML5-compatible MP4/M4V and WebM files. PDF, TXT, Markdown, PNG, 
 ## macOS video playback from an external/local disk
 
 See [MAC_VIDEO_TEST.md](MAC_VIDEO_TEST.md) for the one-folder, zero-database local Mac test procedure. The Mac pilot is *only* enabled for `NODE_ENV=development`, with a configured `MREM_MAC_PILOT_ROOT`, and never on Vercel. It lists and streams a bounded number of files from that folder without copying any media.
+
+
+## Windows Server HOD content mapping
+
+See [WINDOWS_SERVER_HOD_SETUP.md](WINDOWS_SERVER_HOD_SETUP.md) for Windows LAN installation, PostgreSQL schema, staff provisioning, drive grants, bulk folder/file mapping, librarian approvals, audited mapping decisions and scheduled indexing. The self-hosted staff portal is at /staff/login. The Vercel sample demo does not expose this staff backend. Raw media is never copied or renamed.
