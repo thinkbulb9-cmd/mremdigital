@@ -64,7 +64,14 @@ async function scan(source){
    await db.query(`UPDATE scan_jobs SET status='completed',files_seen=$2,folders_seen=$3,completed_at=now() WHERE id=$1`,[scanId,files,folders]);
    await db.query('COMMIT');
   }catch(e){await db.query('ROLLBACK');throw e;}
+  try {
+    // Reconcile new or moved file metadata with already approved academic mappings.
+    await db.query("INSERT INTO mapping_jobs(mapping_request_id,source_id,scope,rel_path) "+
+      "SELECT m.approval_request_id,$1,'folder','' FROM published_mappings m "+
+      "WHERE m.source_id=$1 AND m.active=TRUE ORDER BY m.id LIMIT 1",[source.id]);
+  }catch(error){console.warn('Scan complete; mapping reconciliation queue failed:',String(error));}
   console.log(`Completed ${source.id}: ${files} files and ${folders} folders. Source files unchanged.`);
+
  }catch(error){
   await db.query('UPDATE scan_jobs SET status=$2,error=$3,files_seen=$4,folders_seen=$5,completed_at=now() WHERE id=$1',
    [scanId,'failed',String(error).slice(0,1000),files,folders]);

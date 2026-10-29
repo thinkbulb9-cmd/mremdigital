@@ -41,6 +41,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   file=await getMacPilotFile(id);
  }else{
   const q=await db().query(`SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
+   JOIN resource_assignments a ON a.resource_id=r.id
    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
   file=q.rows[0]||null;
  }
