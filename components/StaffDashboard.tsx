@@ -21,7 +21,7 @@ const request=async (url:string,init?:RequestInit)=>{
  return json;
 };
 export default function StaffDashboard({staff,demo=false}:{staff:Staff;demo?:boolean}){
- const api=(url:string,init?:RequestInit)=>demo?demoStaffRequest(url,init,staff):api(url,init);
+ const api=(url:string,init?:RequestInit)=>demo?demoStaffRequest(url,init,staff):request(url,init);
  const [tab,setTab]=useState<'explore'|'requests'|'audit'>('explore');
  const [data,setData]=useState<Catalog|null>(null);
  const [source,setSource]=useState(''),[search,setSearch]=useState('');
