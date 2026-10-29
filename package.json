@@ -12,7 +12,8 @@
     "scan": "node --env-file=.env.local scripts/scan.mjs",
     "typecheck": "tsc --noEmit",
     "mac:video-test": "bash scripts/mac-video-test.sh",
-    "test:stream": "node --experimental-strip-types --test scripts/test-range-stream.mjs"
+    "test:stream": "node --experimental-strip-types --test scripts/test-range-stream.mjs",
+    "staff:setup": "node --env-file=.env.local scripts/staff-setup.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
