@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createReadStream } from 'node:fs';
-import { Readable } from 'node:stream';
+import { createRangedFileStream } from '@/lib/range-file-stream';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { mimeFor, resolveStoredFile } from '@/lib/storage';
@@ -71,6 +70,8 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
  if(range)headers['Content-Range']=`bytes ${start}-${end}/${size}`;
  if(!isMacPilot())db().query('INSERT INTO download_events(resource_id,range_request) VALUES($1,$2)',[id,Boolean(range)]).catch(()=>{});
  if(size===0)return new Response(null,{status:200,headers});
- return new Response(Readable.toWeb(createReadStream(absolute,{start,end})) as ReadableStream<Uint8Array>,
-    {status:range?206:200,headers});
+ let stream: ReadableStream<Uint8Array>;
+ try { stream=await createRangedFileStream(absolute,start,end); }
+ catch { return new Response('File unavailable on disk',{status:404}); }
+ return new Response(stream,{status:range?206:200,headers});
 }
