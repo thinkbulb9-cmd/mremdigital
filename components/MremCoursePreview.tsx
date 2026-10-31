@@ -20,15 +20,17 @@ const departments=[
  {code:'AIML',name:'AI & Machine Learning'},
  {code:'DS',name:'Data Science'}
 ];
-const sampleResources:Resource[]=[
- {id:'l01',name:'mod01lec01.mp4',display:'Module 01 · Lecture 01',kind:'video',module:'Module 01',folder:'101101086',info:'Filename visible in supplied server screenshot'},
- {id:'l02',name:'mod01lec02.mp4',display:'Module 01 · Lecture 02',kind:'video',module:'Module 01',folder:'101101086',info:'Filename visible in supplied server screenshot'},
- {id:'l03',name:'mod01lec03.mp4',display:'Module 01 · Lecture 03',kind:'video',module:'Module 01',folder:'101101086',info:'Filename visible in supplied server screenshot'},
- {id:'l04',name:'mod01lec04.mp4',display:'Module 01 · Lecture 04',kind:'video',module:'Module 01',folder:'101101086',info:'Filename visible in supplied server screenshot'},
- {id:'l05',name:'mod02lec06.mp4',display:'Module 02 · Lecture 06',kind:'video',module:'Module 02',folder:'101101086',info:'Filename visible in supplied server screenshot'},
- {id:'notes',name:'example-notes.pdf',display:'PDF preview example',kind:'pdf',module:'Example material',folder:'PREVIEW',info:'Synthetic demo file — not from the college drive'},
- {id:'html',name:'example-index.html',display:'HTML document preview example',kind:'html',module:'Example material',folder:'PREVIEW',info:'Safe static sample — not copied from the drive'}
-];
+const lessonTitles=["Introduction","Course Plan","Ascent Mission Basics","Force and Geometry Models — Part 1","Force and Geometry Models — Part 2","Idealized Performance","Trajectory Under Gravity","Impact of Gravity","Impact of Drag","Curvilinear Motion Concept","Constant Pitch Rate Solution","Constant Velocity Solution","Constant Thrust-to-Mass Ratio Solution","Ascent Mission Design","Multi-stage Rocket Basics","Multi-stage Configuration Basics","Multi-stage Solution Basics","Multi-stage Problem Definition","Optimal Staging Strategy","Lagrange Solution","Approximate Staging Solution","Variant Concept","Variant Design Solution","Parallel Staging Concept","Parallel Staging Benefits","Jet Damping and Ballistic Missiles","Current Rocket Concepts","Launch Window and SSTO Concepts"];
+const groupModule=(index:number)=>index<5?1:index<9?2:index<13?3:index<17?4:index<21?5:index<25?6:7;
+const sampleResources:Resource[]=lessonTitles.map((title,index)=>({
+ id:'lecture-'+(index+1),name:'mod'+String(groupModule(index)).padStart(2,'0')+'lec'+String(index+1).padStart(2,'0')+'.mp4',
+ display:'Lecture '+String(index+1).padStart(2,'0')+': '+title,kind:'video' as const,
+ module:'Module '+String(groupModule(index)).padStart(2,'0'),folder:'101101086',
+ info:'Candidate title from course lecture list; exact file match pending campus drive verification'
+})).concat([
+ {id:'notes',name:'example-notes.pdf',display:'PDF Viewer Example',kind:'pdf',module:'Sample Materials',folder:'PREVIEW',info:'Synthetic test file'},
+ {id:'html',name:'example-index.html',display:'HTML Viewer Example',kind:'html',module:'Sample Materials',folder:'PREVIEW',info:'Synthetic test file'}
+]);
 const courses:Course[]=[
  {code:'101101086',title:'Introduction to Launch Vehicle Analysis and Design',department:'AE',instructor:'Prof. Ashok Joshi',school:'IIT Bombay',semester:'Jan–Apr 2021',folder:'Jan_Apr_2021/101/101101086',verified:true,description:'Learn how launch vehicles are analysed and designed, including mission trajectory fundamentals.',resources:sampleResources,tone:'navy'},
  {code:'101101087',title:'Lighter than Air Systems',department:'AE',instructor:'Prof. Rajkumar S. Pant',school:'IIT Bombay',semester:'Jan–Apr 2021',folder:'Jan_Apr_2021/101/101101087',verified:true,description:'Aerospace course covering lighter-than-air flight systems and their engineering.',resources:[],tone:'sky'},
@@ -125,8 +127,8 @@ export default function MremCoursePreview(){
     <div className={'ml-course-hero ml-tonal-'+course.tone}>
      <div><div className="ml-course-meta"><span>{departments.find(d=>d.code===course.department)?.name}</span><span>NPTEL ID: {course.code}</span></div><h1>{course.title}</h1><p>{course.description}</p><div className="ml-prof"><span><GraduationCap size={17}/> {course.instructor}</span><span><School size={17}/> {course.school}</span></div><div className="ml-course-actions"><span>{course.verified?'Verified course title':'Course title pending verification'}</span></div></div><div className="ml-course-large-symbol"><BookOpen size={90} strokeWidth={1}/></div>
     </div>
-    <div className="ml-detail-grid"><div className="ml-lectures"><div className="ml-section-heading"><div><span className="ml-section-eyebrow">RESOURCES & LECTURES</span><h2>Course content</h2><p>Example filenames and viewers. Real disk streaming will be enabled after the Windows indexing test.</p></div></div>
-      {activeResources.length?<div className="ml-resource-list">{activeResources.map((r,i)=><div className="ml-resource-row" key={r.id}><div className={'ml-file-icon type-'+r.kind}>{infoFor(r.kind)}</div><div className="ml-resource-info"><strong>{r.display}</strong><small>{r.name} · {r.module}</small></div><span className="ml-format">{word(r.kind)}</span><div className="ml-resource-actions"><button onClick={()=>viewResource(r,course)}>{r.kind==='video'?<Play size={15}/>:<Eye size={15}/>} {r.kind==='video'?'Play':'View'}</button><button onClick={()=>viewResource(r,course)}><ArrowDownToLine size={15}/> Sample</button></div></div>)}</div>:<div className="ml-no-lessons"><FolderOpen size={34}/><h3>File mapping not completed</h3><p>This course ID is visible in the supplied screenshot, but its lecture files haven't been indexed from the Windows E: drive.</p><a href={official(course.code)} target="_blank" rel="noopener noreferrer">Open verified NPTEL reference <ExternalLink size={14}/></a></div>}
+    <div className="ml-detail-grid"><div className="ml-lectures"><div className="ml-section-heading"><div><span className="ml-section-eyebrow">RESOURCES & LECTURES</span><h2>Course content</h2><p>Explore lessons module by module. Exact lecture-to-file mapping needs local verification.</p></div></div>
+      {activeResources.length?<ModuleLearningList resources={activeResources} onSelect={(r)=>viewResource(r,course)}/>:<div className="ml-no-lessons"><FolderOpen size={34}/><h3>File mapping not completed</h3><p>This course ID is visible in the supplied screenshot, but its lecture files haven't been indexed from the Windows E: drive.</p><a href={official(course.code)} target="_blank" rel="noopener noreferrer">Open verified NPTEL reference <ExternalLink size={14}/></a></div>}
     </div><aside className="ml-course-side"><h3>Course details</h3><dl><dt>NPTEL course ID</dt><dd>{course.code}</dd><dt>Department</dt><dd>{departments.find(d=>d.code===course.department)?.name}</dd><dt>Academic archive</dt><dd>Jan–Apr 2021</dd><dt>Source drive</dt><dd>Server 01 · MREM1 (E:)</dd><dt>Lectures detected</dt><dd>{course.code==='101101086'?'Example filenames from screenshot':'Awaiting disk scan'}</dd></dl><div className="ml-path"><span>SCREENSHOT PATH REFERENCE</span><code>E:\{course.folder.replaceAll('/','\\')}</code></div><div className="ml-card-notice"><ShieldCheck size={17}/> No login interface in final campus version; actual storage remains read-only.</div></aside></div>
    </>}
    <footer className="ml-footer"><span>© MREM Digital Library · Student LMS</span><span>College-hosted lessons · No external redirects</span></footer>
@@ -141,5 +143,30 @@ export default function MremCoursePreview(){
 }
 function CourseCard({course,onClick}:{course:Course;onClick:()=>void}){
  return <button className="ml-course-card" onClick={onClick}><div className={'ml-cover ml-tonal-'+course.tone}><div className="ml-cover-bg"><span/><span/><span/></div><div className="ml-cover-label">ACADEMIC COURSE</div><div className="ml-cover-icon"><BookOpen size={48} strokeWidth={1.2}/></div><span className="ml-cover-code">{course.code}</span></div><div className="ml-course-content"><div className="ml-course-tags"><span>{course.department}</span><span className={course.verified?'verified':'pending'}>{course.verified?<CheckCircle2 size={12}/>:<Clock3 size={12}/>} {course.verified?'Verified':'To verify'}</span></div><h3>{course.title}</h3><p>{course.instructor} · {course.school}</p><div className="ml-course-footer"><span><BookOpen size={14}/> Course {course.code}</span><span>Explore course <ArrowRight size={16}/></span></div></div></button>;
+}
+function ModuleLearningList({resources,onSelect}:{resources:Resource[];onSelect:(r:Resource)=>void}){
+ const [expanded,setExpanded]=useState<string[]>(['Module 01']);
+ const modules=[...new Set(resources.map(r=>r.module))];
+ const toggle=(name:string)=>setExpanded(prev=>prev.includes(name)?prev.filter(x=>x!==name):[...prev,name]);
+ return <div className="ml-module-list">{modules.map(module=>{
+  const lessons=resources.filter(r=>r.module===module);
+  const isOpen=expanded.includes(module);
+  return <section className="ml-module-section" key={module}>
+   <button className="ml-module-toggle" aria-expanded={isOpen} onClick={()=>toggle(module)}>
+    <div className="ml-module-number"><Layers3 size={19}/></div>
+    <span><strong>{module}</strong><small>{lessons.length} {lessons.length===1?'lesson':'lessons'} · Topic-wise learning</small></span>
+    <ChevronDown className={isOpen?'ml-chevron-open':''} size={18}/>
+   </button>
+   {isOpen&&<div className="ml-module-contents">{lessons.map(r=><div className="ml-resource-row" key={r.id}>
+    <div className={'ml-file-icon type-'+r.kind}>{infoFor(r.kind)}</div>
+    <div className="ml-resource-info"><strong>{r.display}</strong><small>{r.name} · Topic-to-file match provisional</small></div>
+    <span className="ml-format">{word(r.kind)}</span>
+    <div className="ml-resource-actions">
+     <button onClick={()=>onSelect(r)}>{r.kind==='video'?<Play size={15}/>:<Eye size={15}/>} {r.kind==='video'?'Play':'View'}</button>
+     <button onClick={()=>onSelect(r)}><ArrowDownToLine size={15}/> Download</button>
+    </div>
+   </div>)}</div>}
+  </section>;
+ })}</div>;
 }
 function EmptyState({onReset}:{onReset:()=>void}){return <div className="ml-empty"><Search size={29}/><h3>No matching verified catalogue entries</h3><p>More courses and topics will appear after the campus library catalogue is indexed.</p><button onClick={onReset}>Clear filters <ArrowRight size={15}/></button></div>}
