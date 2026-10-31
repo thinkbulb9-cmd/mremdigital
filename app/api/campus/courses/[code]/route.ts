@@ -1,12 +1,17 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {campusMode} from '@/lib/campus-mode';
+import {approvalRequired} from '@/lib/campus-publication';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest,ctx:{params:Promise<{code:string}>}){
  if(!campusMode())return NextResponse.json({error:'Not available'},{status:404});
  const {code}=await ctx.params;
  if(!/^(?:\d{9}|UNCLASSIFIED)$/.test(code))return NextResponse.json({error:'Invalid course'},{status:400});
+ if(approvalRequired()){
+  const approved=await db().query('SELECT 1 FROM campus_publications WHERE course_code=$1 AND approved=TRUE',[code]);
+  if(!approved.rowCount)return NextResponse.json({error:'Not approved for student access'},{status:403});
+ }
  const page=Math.min(100000,Math.max(1,parseInt(req.nextUrl.searchParams.get('page')||'1',10)||1)),limit=100;
  const count=await db().query("SELECT count(*)::bigint AS total FROM resources r JOIN storage_sources s ON s.id=r.source_id "+
  "WHERE r.availability='available' AND s.enabled=TRUE AND COALESCE(r.course_code,'UNCLASSIFIED')=$1",[code]);
