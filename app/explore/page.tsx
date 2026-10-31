@@ -1,3 +1,6 @@
 import MremCoursePreview from '@/components/MremCoursePreview';
-export const metadata={title:'MREM Open Digital Library — UI Preview',description:'Student-first NPTEL-style MREM offline library design preview'};
-export default function Page(){return <MremCoursePreview/>;}
+import CampusLibrary from '@/components/CampusLibrary';
+import {campusMode} from '@/lib/campus-mode';
+export const dynamic='force-dynamic';
+export const metadata={title:'MREM Digital Learning Library',description:'College-hosted learning courses and media'};
+export default function Page(){return campusMode()?<CampusLibrary/>:<MremCoursePreview/>;}
