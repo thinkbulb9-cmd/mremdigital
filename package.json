@@ -16,7 +16,8 @@
     "staff:setup": "node --env-file=.env.local scripts/staff-setup.mjs",
     "mappings:apply": "node --env-file=.env.local scripts/apply-mappings.mjs",
     "campus:scan": "node --env-file=.env.local scripts/scan-full-drive.mjs",
-    "campus:metadata": "node --env-file=.env.local scripts/import-course-catalog.mjs"
+    "campus:metadata": "node --env-file=.env.local scripts/import-course-catalog.mjs",
+    "campus:export": "node --env-file=.env.local scripts/export-full-inventory.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
