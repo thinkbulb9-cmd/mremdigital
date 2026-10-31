@@ -20,7 +20,9 @@
     "campus:export": "node --env-file=.env.local scripts/export-full-inventory.mjs",
     "campus:departments": "node --env-file=.env.local scripts/map-nptel-departments.mjs",
     "campus:audit": "node --env-file=.env.local scripts/audit-campus-index.mjs",
-    "campus:publish": "node --env-file=.env.local scripts/publish-course.mjs"
+    "campus:publish": "node --env-file=.env.local scripts/publish-course.mjs",
+    "campus:review:export": "node --env-file=.env.local scripts/export-course-hod-review.mjs",
+    "campus:review:import": "node --env-file=.env.local scripts/import-course-hod-review.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
