@@ -95,3 +95,5 @@
 .ml-module-toggle>svg:last-child{color:#8ca0bb;transition:transform .18s}.ml-module-toggle>.ml-chevron-open{transform:rotate(180deg)}
 .ml-module-number{display:grid;place-items:center;background:#e5edff;color:#2d5cac;border-radius:9px;padding:10px}
 .ml-module-contents{padding:0 14px}.ml-module-contents .ml-resource-row:last-child{border-bottom:0}
+
+.ml-learning-summary{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}.ml-learning-summary p{display:flex;gap:9px;align-items:center;padding:10px 12px;margin:0;background:#f3f6fd;border-radius:7px;color:#47639a;font-size:11px;font-weight:700}.ml-verify-notice{display:block;color:#8799b4;font-size:12px;line-height:1.5}
