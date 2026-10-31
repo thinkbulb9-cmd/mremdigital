@@ -164,3 +164,35 @@ npm run start
 The workflow updates DB publication schema, infers historical NPTEL department suggestions, exports a course title review CSV and possible repeat-file report, and rebuilds the student website. It does not move or change E: media. The initial PDF iframe preview fix is included in source.
 
 **Not yet a college LAN release:** Until every academic resource is reviewed, keep Node on 127.0.0.1. The current local pilot is anonymous; use `MREM_CAMPUS_REQUIRE_APPROVAL=enabled` and explicit HOD course approvals before asking campus IT to configure LAN HTTPS and startup service. See [CAMPUS_WINDOWS_RELEASE_CHECKLIST.md](CAMPUS_WINDOWS_RELEASE_CHECKLIST.md) for the full safety and deployment procedure.
+
+
+## Legacy NPTEL HTML catalogue -> GitHub academic-only export
+
+The original archive has discipline-level HTML catalogues such as
+`E:\Jan_Apr_2021\101\index.html` with subjectId, discipline, subject name,
+coordinators and institute. To extract these tables directly from the **already
+indexed** original E: drive and push only safe academic metadata to the public
+GitHub repo (not source HTML, PDF, MP4, file paths, PII or secrets):
+
+```powershell
+cd C:\MREM\mremdigital
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\export-and-push-legacy-html.ps1
+```
+
+The script runs offline parser tests, queries PostgreSQL for indexed
+`index.html` / `index.htm` locations, reads only those E: files, and writes
+chunked `data/legacy-course-index/courses-0001.json` etc., plus
+`summary.json`. It then commits ONLY `data/legacy-course-index` and pushes
+to the GitHub `main` branch. Requires GitHub push credentials configured on the
+college Windows machine; use `-ExportOnly` to preview without uploading.
+
+Because this repository is **public**, carefully review exported academic
+names before sharing if your archive may contain nonpublic catalogues. The
+conservative extractor ignores unrelated HTML and never sends original HTML
+source, video files, PDF files, machine paths or database credentials to GitHub.
+Lecture titles are exported only when an HTML link provides an explicit
+non-generic title; do not assume they exist in every semester.
+
+Do not run `git reset --hard`, or add `.env.local` or the full
+`C:\MREM\inventory` folder to GitHub. If the Windows clone has older local
+code fixes, stash them and pull current GitHub code first.
