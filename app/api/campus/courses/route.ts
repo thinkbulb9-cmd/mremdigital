@@ -19,11 +19,15 @@ export async function GET(req:NextRequest){
   "WHERE r.availability='available' AND s.enabled=TRUE"+approved+" GROUP BY COALESCE(r.course_code,'UNCLASSIFIED')),"+
   "catalogue AS (SELECT t.code,t.files,t.videos,COALESCE(c.title,CASE WHEN t.code='UNCLASSIFIED' THEN 'Unclassified Materials' "+
   "ELSE 'Course '||t.code END) AS title,COALESCE(c.department,'Unclassified') AS department,"+
-  "COALESCE(c.instructor,'') AS instructor,COALESCE(c.verified,FALSE) AS verified "+
+  "COALESCE(c.instructor,'') AS instructor,COALESCE(c.institution,'') AS institution,COALESCE(c.verified,FALSE) AS verified "+
   "FROM counts t LEFT JOIN course_catalog c ON c.course_code=t.code) "+
   "SELECT *,count(*) OVER() AS total FROM catalogue WHERE "+
   "($1='' OR lower(title) LIKE '%'||$1||'%' OR lower(code) LIKE '%'||$1||'%' "+
-  "OR lower(department) LIKE '%'||$1||'%') AND ($2='' OR department=$2) "+
+  "OR lower(department) LIKE '%'||$1||'%' OR lower(instructor) LIKE '%'||$1||'%' OR lower(institution) LIKE '%'||$1||'%' "+
+  // Lecture names count only when a catalogue or reviewer named them; generic "Lecture N" labels are never stored.
+  "OR EXISTS(SELECT 1 FROM legacy_lecture_titles lt WHERE lt.course_code=catalogue.code AND lt.confidence='high' AND lower(lt.title) LIKE '%'||$1||'%') "+
+  "OR EXISTS(SELECT 1 FROM course_lectures cl WHERE cl.course_code=catalogue.code AND cl.verified=TRUE AND lower(cl.title) LIKE '%'||$1||'%')) "+
+  "AND ($2='' OR department=$2) "+
   "ORDER BY (department='Unclassified') ASC,department,title LIMIT $3 OFFSET $4";
  const out=await db().query(sql,[q,department,limit,(page-1)*limit]);
  const depts=await db().query("SELECT c.department FROM course_catalog c WHERE c.department NOT IN ('Unclassified','General') "+

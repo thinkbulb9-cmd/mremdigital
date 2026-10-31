@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {BookOpen,Search,GraduationCap,Layers3,ChevronRight,ChevronDown,ArrowLeft,FileText,Video,Play,Download,Eye,X,File,FolderOpen,ShieldCheck,Menu,Info,RefreshCw} from 'lucide-react';
 import './campus-library.css';
-type Course={code:string;title:string;department:string;instructor:string;files:string;videos:string;verified:boolean};
+type Course={code:string;title:string;department:string;instructor:string;institution:string;files:string;videos:string;verified:boolean};
 type Resource={id:string;name:string;ext:string;kind:string;size_bytes:string;module_no:number|null;lecture_no:number|null;semester_name:string|null;lecture_title?:string|null};
 type Details={code:string;title:string;department:string;instructor:string;institution:string;verified:boolean;items:Resource[];total:number;page:number;limit:number};
 type Listing={items:Course[];departments:string[];total:number;page:number;limit:number};
@@ -84,12 +84,12 @@ export default function CampusLibrary(){
    <main className="cl-main">
     {!course?<><section className="cl-hero"><div><span className="cl-eyebrow">YOUR ACADEMIC RESOURCE CENTRE</span><h1>Learn at your pace.<br/><em>Find every lesson.</em></h1><p>Explore courses, browse modules, play video lectures, read study material and download resources from your college library.</p></div><BookOpen size={110} strokeWidth={1} className="cl-hero-icon"/></section>
     <div className="cl-heading"><div><small>LEARNING CATALOGUE</small><h2>{dept||'Explore All Courses'}</h2><p>Available courses appear automatically as the local drive is indexed.</p></div></div>
-    <div className="cl-search-row"><div className="cl-search"><Search size={20}/><input placeholder="Search by subject, topic or course ID..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}}/></div><button onClick={()=>{setSearch('');setDept('');setPage(1)}}>Clear filters</button></div>
+    <div className="cl-search-row"><div className="cl-search"><Search size={20}/><input placeholder="Search by subject, coordinator or course ID..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}}/></div><button onClick={()=>{setSearch('');setDept('');setPage(1)}}>Clear filters</button></div>
     {status?.latestScan?.status==='running'&&<div className="cl-inline-note"><RefreshCw size={16}/> Library index is being built. {Number(status.latestScan.files_seen||0).toLocaleString()} files indexed so far; new courses will appear as scanning continues.</div>}
     {error&&<div className="cl-error">{error}</div>}
     {loading?<div className="cl-loading">Loading course catalogue...</div>:list.items.length?<div className="cl-cards">{list.items.map(c=><button className="cl-course" key={c.code} onClick={()=>showCourse(c.code)}>
        <div className="cl-course-top"><span>{c.department}</span><BookOpen size={38} strokeWidth={1}/></div>
-       <div className="cl-course-body"><small>{c.verified?'VERIFIED COURSE TITLE':'COURSE TITLE PENDING'}</small><h3>{c.title}</h3><p>{c.instructor||'Course materials'}</p><div className="cl-course-stats"><span><Video size={15}/>{Number(c.videos).toLocaleString()} videos</span><span><FileText size={15}/>{Number(c.files).toLocaleString()} files</span></div><div className="cl-enter">Open course <ChevronRight size={17}/></div></div>
+       <div className="cl-course-body"><small>{c.verified?'VERIFIED COURSE TITLE':'COURSE TITLE PENDING'}</small><h3>{c.title}</h3><p>{[c.instructor,c.institution].filter(Boolean).join(' · ')||'Course materials'}</p><div className="cl-course-stats"><span><Video size={15}/>{Number(c.videos).toLocaleString()} videos</span><span><FileText size={15}/>{Number(c.files).toLocaleString()} files</span></div><div className="cl-enter">Open course <ChevronRight size={17}/></div></div>
       </button>)}</div>:<div className="cl-empty">No courses match these filters. {status?.latestScan?.status==='running'?'The drive is still being indexed.':'Make sure the source drive has been registered and scanned.'}</div>}
     <div className="cl-pagination"><span>{list.total.toLocaleString()} course groups</span><div><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>Previous</button><span>{page} / {pageCount}</span><button disabled={page>=pageCount} onClick={()=>setPage(p=>p+1)}>Next</button></div></div>
     </>:<><button className="cl-back" onClick={goHome}><ArrowLeft size={18}/> Back to Courses</button>
@@ -103,7 +103,7 @@ export default function CampusLibrary(){
         </div>)}</div>}
        </div>):<div className="cl-empty">No indexed files found for this course.</div>}
        <div className="cl-pagination"><span>Page {detailPage} / {detailCount}</span><div><button disabled={detailPage===1} onClick={()=>{setDetailPage(p=>p-1);window.scrollTo({top:0})}}>Previous</button><button disabled={detailPage>=detailCount} onClick={()=>{setDetailPage(p=>p+1);window.scrollTo({top:0})}}>Next 100</button></div></div>
-      </section><aside className="cl-course-aside"><h3>Course Information</h3><dl><dt>Course title</dt><dd>{details.title}</dd><dt>Department</dt><dd>{details.department}</dd><dt>Course ID</dt><dd>{details.code}</dd><dt>Academic files</dt><dd>{details.total.toLocaleString()}</dd><dt>Course title status</dt><dd>{details.verified?'Verified':'Metadata pending'}</dd></dl><div className="cl-help"><Info size={19}/> Topic names are shown only when verified metadata exists. Other items keep their original filenames or lecture numbers.</div></aside></div>
+      </section><aside className="cl-course-aside"><h3>Course Information</h3><dl><dt>Course title</dt><dd>{details.title}</dd><dt>Department</dt><dd>{details.department}</dd>{details.instructor&&<><dt>Coordinators</dt><dd>{details.instructor}</dd></>}{details.institution&&<><dt>Institution</dt><dd>{details.institution}</dd></>}<dt>Course ID</dt><dd>{details.code}</dd><dt>Academic files</dt><dd>{details.total.toLocaleString()}</dd><dt>Course title status</dt><dd>{details.verified?'Verified':'Metadata pending'}</dd></dl><div className="cl-help"><Info size={19}/> Lecture titles are shown only when the college catalogue names that exact lecture. Other items keep their original filenames or lecture numbers.</div></aside></div>
      </>:<div className="cl-loading">Loading...</div>}
     </>}
     <footer className="cl-footer">MREM Digital Learning Library · Internal college resources</footer>
