@@ -13,6 +13,7 @@ Run-Npm -Arguments @('run','db:init')
 Run-Npm -Arguments @('run','campus:departments')
 Run-Npm -Arguments @('run','campus:audit','--','server1')
 Run-Npm -Arguments @('run','campus:review:export','--','C:\MREM\inventory')
+Run-Npm -Arguments @('run','campus:repeats','--','server1','C:\MREM\inventory')
 Run-Npm -Arguments @('run','build')
 Write-Host 'LOCAL PILOT READY. Start with npm run start, then open http://127.0.0.1:3000/explore' -ForegroundColor Green
 Write-Host 'No scan was launched. Media on E: untouched. Do NOT expose to LAN before approval workflow and campus IT configuration.' -ForegroundColor Yellow
