@@ -16,7 +16,7 @@ const map = new Map(Object.entries({
  '117':'Electronics and Communication Engineering','118':'Nanotechnology',
  '119':'Atmospheric Science','121':'General','122':'Basic Courses',
  '123':'Mining Engineering','124':'Architecture','126':'Agriculture',
- '127':'Multi-Disciplinary','128':'Special Lecture Series'
+ '127':'Multidisciplinary','128':'Special Lecture Series'
 }));
 if(!process.env.DATABASE_URL) throw Error('Set DATABASE_URL in .env.local');
 const db = new pg.Client({connectionString: process.env.DATABASE_URL});
