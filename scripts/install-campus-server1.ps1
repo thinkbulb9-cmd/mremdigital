@@ -7,7 +7,8 @@ Set-Location -LiteralPath $Root
 foreach($app in @('node','npm','git')){
  if(-not(Get-Command $app -ErrorAction SilentlyContinue)){throw "Install missing prerequisite: $app"}
 }
-$major=[int]((& node -p 'process.versions.node.split(".")[0]').Trim())
+$nodeVersion = (& node --version).Trim()
+$major = [int]($nodeVersion.Substring(1).Split('.')[0])
 if($major -lt 22){throw 'Node.js 22+ required'}
 if(-not(Test-Path -LiteralPath $DrivePath -PathType Container)){throw "Drive not accessible: $DrivePath"}
 $envFile=Join-Path $Root '.env.local'
