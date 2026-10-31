@@ -149,3 +149,18 @@ See [MAC_VIDEO_TEST.md](MAC_VIDEO_TEST.md) for the one-folder, zero-database loc
 ## Windows Server HOD content mapping
 
 See [WINDOWS_SERVER_HOD_SETUP.md](WINDOWS_SERVER_HOD_SETUP.md) for Windows LAN installation, PostgreSQL schema, staff provisioning, drive grants, bulk folder/file mapping, librarian approvals, audited mapping decisions and scheduled indexing. The self-hosted staff portal is at /staff/login. The Vercel sample demo does not expose this staff backend. Raw media is never copied or renamed.
+
+
+## College Windows campus completion (Oct 2026)
+
+After the 1.3-million-file local index is built, finish without a new scan:
+
+```powershell
+cd C:\MREM\mremdigital
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\finish-campus-pilot.ps1
+npm run start
+```
+
+The workflow updates DB publication schema, infers historical NPTEL department suggestions, exports a course title review CSV and possible repeat-file report, and rebuilds the student website. It does not move or change E: media. The initial PDF iframe preview fix is included in source.
+
+**Not yet a college LAN release:** Until every academic resource is reviewed, keep Node on 127.0.0.1. The current local pilot is anonymous; use `MREM_CAMPUS_REQUIRE_APPROVAL=enabled` and explicit HOD course approvals before asking campus IT to configure LAN HTTPS and startup service. See [CAMPUS_WINDOWS_RELEASE_CHECKLIST.md](CAMPUS_WINDOWS_RELEASE_CHECKLIST.md) for the full safety and deployment procedure.
