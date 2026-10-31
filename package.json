@@ -22,7 +22,8 @@
     "campus:audit": "node --env-file=.env.local scripts/audit-campus-index.mjs",
     "campus:publish": "node --env-file=.env.local scripts/publish-course.mjs",
     "campus:review:export": "node --env-file=.env.local scripts/export-course-hod-review.mjs",
-    "campus:review:import": "node --env-file=.env.local scripts/import-course-hod-review.mjs"
+    "campus:review:import": "node --env-file=.env.local scripts/import-course-hod-review.mjs",
+    "campus:repeats": "node --env-file=.env.local scripts/export-possible-repeats.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
