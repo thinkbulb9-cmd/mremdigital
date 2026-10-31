@@ -7,6 +7,11 @@ type Resource={id:string;name:string;ext:string;kind:string;size_bytes:string;mo
 type Details={code:string;title:string;department:string;instructor:string;institution:string;verified:boolean;items:Resource[];total:number;page:number;limit:number};
 type Listing={items:Course[];departments:string[];total:number;page:number;limit:number};
 const fileUrl=(id:string,inline=false)=>'/api/files/'+encodeURIComponent(id)+'/download'+(inline?'?inline=1':'');
+const groupName=(f:Resource)=>{
+ const semester=(f.semester_name||'').replace(/[_-]/g,' ').trim();
+ const module=groupName(f);
+ return semester?semester+' / '+module:module;
+};
 const size=(s:string)=>{const n=Number(s);return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B'};
 const supportedVideo=(e:string)=>['.mp4','.m4v','.webm','.mov'].includes(e.toLowerCase());
 const supportedDownload=(e:string)=>['.mp4','.m4v','.webm','.mov','.avi','.mkv','.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.webp','.doc','.docx','.ppt','.pptx','.xls','.xlsx','.csv','.zip','.rar','.7z'].includes(e.toLowerCase());
@@ -41,7 +46,7 @@ export default function CampusLibrary(){
   if(!course){setDetails(null);return;}
   const c=new AbortController();setError('');setLoading(true);
   getJSON<Details>('/api/campus/courses/'+encodeURIComponent(course)+'?page='+detailPage,c.signal)
-   .then(r=>{setDetails(r);setExpanded([...new Set(r.items.map(x=>x.module_no===null?'Other Materials':'Module '+String(x.module_no).padStart(2,'0')))].slice(0,1))})
+   .then(r=>{setDetails(r);setExpanded([...new Set(r.items.map(x=>groupName(x)))].slice(0,1))})
    .catch(e=>{if(e.name!=='AbortError')setError(e.message)}).finally(()=>{if(!c.signal.aborted)setLoading(false)});
   return()=>c.abort();
  },[course,detailPage]);
@@ -106,7 +111,7 @@ export default function CampusLibrary(){
   </div>
   {preview&&<div className="cl-modal-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setPreview(null)}}><div className="cl-modal" role="dialog" aria-modal="true" aria-label={'Preview '+preview.name}>
     <div className="cl-modal-header"><strong>{preview.lecture_title||preview.name}</strong><button aria-label="Close" onClick={()=>setPreview(null)}><X size={18}/></button></div>
-    <div className="cl-modal-body">{supportedVideo(preview.ext)?<video key={preview.id} src={fileUrl(preview.id,true)} controls playsInline preload="metadata"/>:preview.kind==='Image'?<img alt={preview.name} src={fileUrl(preview.id,true)}/>:<iframe title={'Preview '+preview.name} src={fileUrl(preview.id,true)} sandbox="allow-same-origin"/>}</div>
+    <div className="cl-modal-body">{supportedVideo(preview.ext)?<video key={preview.id} src={fileUrl(preview.id,true)} controls playsInline preload="metadata"/>:preview.kind==='Image'?<img alt={preview.name} src={fileUrl(preview.id,true)}/>:<iframe title={'Preview '+preview.name} src={fileUrl(preview.id,true)} sandbox={preview.ext.toLowerCase()==='.pdf'?undefined:'allow-same-origin'}/>}</div>
     <div className="cl-modal-footer"><span>Viewed directly from the local college library</span><a href={fileUrl(preview.id)} download><Download size={16}/> Download Original</a></div>
   </div></div>}
  </div>;
