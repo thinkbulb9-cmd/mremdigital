@@ -264,8 +264,10 @@ try{
   const byCode=new Map();
   const slot=(code)=>{if(!byCode.has(code))byCode.set(code,{records:[],links:[],titles:[],plan:null,lectures:[],conflicts:[]});return byCode.get(code)};
   for(const r of records)slot(r.course_code).records.push(r);
-  for(const m of matched)slot(m.course_code).links.push(m);
-  for(const t of lecturePlan.fileTitles)slot(t.course_code).titles.push(t);
+  // Links found on pages outside any course folder can match a file exactly yet name no course;
+  // they stay in the reports but are not imported as course mappings.
+  for(const m of matched)if(m.course_code)slot(m.course_code).links.push(m);
+  for(const t of lecturePlan.fileTitles)if(t.course_code)slot(t.course_code).titles.push(t);
   for(const l of lecturePlan.lectures)slot(l.course_code).lectures.push(l);
   for(const c of conflicts)slot(c.course_code||'').conflicts.push(c);
   for(const c of coursePlan.courses)slot(c.course_code).plan=c;
