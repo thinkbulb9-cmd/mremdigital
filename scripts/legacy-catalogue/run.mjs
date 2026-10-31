@@ -73,6 +73,7 @@ try{
   const row={rel_path:d.rel_path,semester_root,root_recognized:ri.recognized,level:levelOf(d.rel_path),size_bytes:d.size_bytes,
    modified_at:d.modified_at,layout:'',status:'',course_rows:0,content_links:0,note:''};
   sources.push(row);
+  if(sources.length%2000===0)console.log('Read '+sources.length+' of '+discovered.length+' catalogue candidates');
   if(['.xls','.xlsx','.xml','.json'].includes(d.ext)){row.layout='not-parsed-format';row.status='needs-review';continue}
   const file=await readArchiveFile(rootReal,d.rel_path);
   if(file.error){row.status=file.error;continue}
@@ -149,8 +150,13 @@ try{
  }
  for(const m of matches){
   const k=m.source_rel_path+'|'+m.course_code+'|'+compareKey(m.label);
-  m.title=m.status==='matched'&&m.root_recognized&&meaningfulLabel(m.label,path.posix.basename(m.ref))&&labelUse.get(k).size===1&&
-   compareKey(m.label)!==compareKey(m.course_title)?text(m.label):'';
+  const named=m.status==='matched'&&m.root_recognized&&meaningfulLabel(m.label,path.posix.basename(m.ref))&&labelUse.get(k).size===1&&
+   compareKey(m.label)!==compareKey(m.course_title);
+  // A label is a lecture title only when it names a file that is itself a numbered lecture (modXXlecYY);
+  // other named links (e.g. Web_courses page links to PDFs and figures) go to HOD review, never to students.
+  const lectureFile=m.module_no!==null&&m.module_no!==undefined&&m.lecture_no!==null&&m.lecture_no!==undefined&&['Video','Document'].includes(m.kind);
+  m.title=named&&lectureFile?text(m.label):'';
+  m.title_candidate=named&&!lectureFile?text(m.label):'';
  }
 
  // 5. Validate catalogue rows against inventory file counts, then plan catalogue changes.
@@ -196,6 +202,8 @@ try{
   [...plannedCourses].sort((a,b)=>a.department.localeCompare(b.department)||a.title.localeCompare(b.title)));
  await writeCsv('course_lecture_titles.csv',['course_code','semester_root','module_no','lecture_no','title','resource_id','confidence',
   'resolved_rel_path','source_rel_path'],lecturePlan.fileTitles);
+ await writeCsv('lecture_title_candidates_for_review.csv',['course_code','semester_root','title_candidate','kind','resource_id','resolved_rel_path','source_rel_path'],
+  matches.filter(m=>m.title_candidate));
  const linkCols=['course_code','semester_root','status','method','confidence','resource_id','module_no','lecture_no',
   'kind','ref','viewer','resolved_rel_path','label','title','via','reason','note','source_rel_path'];
  const isVideoLink=(m)=>m.kind?m.kind==='Video':VIDEO_EXT.has(path.posix.extname(String(m.ref).split(/[?#]/)[0]).toLowerCase());
@@ -244,7 +252,7 @@ try{
    departments_identified:new Set(mappedCourses.map(c=>c.department).filter(d=>d&&d!=='Unclassified')).size,
    total_video_files:media.videos,videos_in_mapped_courses:media.videos_mapped,
    videos_linked_by_catalogue:new Set(matched.filter(isVideoLink).map(m=>m.resource_id)).size,
-   lectures_with_genuine_titles:lecturePlan.fileTitles.length,total_document_files:media.documents,
+   lectures_with_genuine_titles:lecturePlan.fileTitles.length,lecture_title_candidates_for_review:matches.filter(m=>m.title_candidate).length,total_document_files:media.documents,
    documents_in_mapped_courses:media.documents_mapped,unresolved_records:unresolved.length,conflicting_records:conflicts.length},
   test_courses:tests,elapsed_seconds:Math.round((Date.now()-started)/1000),
   notes:['Catalogue titles are metadata only; student visibility still requires campus_publications approval when MREM_CAMPUS_REQUIRE_APPROVAL=enabled.',

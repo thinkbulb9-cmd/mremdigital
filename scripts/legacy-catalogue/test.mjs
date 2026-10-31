@@ -163,6 +163,11 @@ test('only meaningful labels become lecture titles',()=>{
  assert.equal(meaningfulLabel('-- Select --',''),false);
  assert.equal(meaningfulLabel('Module 1 Lecture 1','x.mp4'),false);
  assert.equal(meaningfulLabel('Introduction to Launch Vehicles','mod01lec01.mp4'),true);
+ // Labels seen on the real Web_courses pages that name material, figures or actions rather than a lecture.
+ for(const l of ['Lesson 21','Teacher Slides','Lesson 3 Slides','Sample Questions','Course Objectives','Glossary','Fig. 10.18 (b)',
+  'eqn (6.37)','Table 7.1','click here to enlarge','Download this lecture as pdf','Hyperlink-2','Application 14','Schematic3','Case Study II','5.ppt'])
+  assert.equal(meaningfulLabel(l,'m111.pdf'),false,l);
+ assert.equal(meaningfulLabel('Image Sampling','m111.pdf'),true);
 });
 const rec=(o)=>({course_code:'101104086',title:'Computational Science in Engineering',discipline:'Aerospace Engineering',coordinators:'Prof. Ashoke De',
  institution:'IIT Kanpur',semester_root:'Jan_Apr_2021',source_rel_path:'Jan_Apr_2021/101/index.html',order:20211,inventory_files:40,...o});

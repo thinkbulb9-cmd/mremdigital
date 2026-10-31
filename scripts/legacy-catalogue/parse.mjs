@@ -162,12 +162,14 @@ export function parseCatalogueCsv(src){
  return {tables:[Object.keys(cols)],courses,skippedRows,pageLinks:[]};
 }
 
-const GENERIC_LABEL=/^(?:(?:mod(?:ule)?|m)\s*[-_.:]?\s*\d+\s*[-_.:/,]*\s*(?:lec(?:ture)?|l)\s*[-_.:]?\s*\d+|(?:lec(?:ture)?|video|part|session|week|unit|module|chapter|file|pdf|download|play|view|click here|open)\s*[-_.:#]?\s*\d*|\d+|-+.*-+|select.*|choose.*|please select.*|video lectures?|lecture notes?|pdf|videos?)$/i;
+const GENERIC_LABEL=/^(?:(?:mod(?:ule)?|m)\s*[-_.:]?\s*\d+\s*[-_.:/,]*\s*(?:lec(?:ture)?|l)\s*[-_.:]?\s*\d+|(?:lec(?:ture)?|lesson|video|part|session|week|unit|module|chapter|topic|class|day|file|pdf|download|play|view|click here|open)\s*[-_.:#]?\s*\d*|\d+|-+.*-+|select.*|choose.*|please select.*|video lectures?|lecture notes?|pdf|videos?)$/i;
+// Seen on the Web_courses pages: links named after the kind of material, a figure/equation, or the act of clicking.
+const MATERIAL_LABEL=/^(?:(?:course\s+|learning\s+)?objectives?|(?:teacher|student)s?\s+slides(?:\s*\d+)?|slides(?:\s*\d+)?|(?:lesson|lecture|module|unit)\s*\d+(?:\s*(?:and|&|-)\s*\d+)?\s*(?:slides|notes|pdf|ppt|video|questions?|objectives?|summary)?|sample\s+questions|question\s+bank|multiple\s+choice\s+questions|glossary|references?(?:\s+and\s+resources)?|further\s+references|refrences|summary|syllabus|assignments?(?:\s*\d+)?|quiz(?:zes)?|answers?|solutions?|downloads?|notes|transcripts?|motivation|highlights(?:\s*(?:and|&)\s*motivation)?|worked\s+examples|test\s+(?:problems|examples)|problems\s+and\s+solutions|case\s+(?:study|studies|tools)(?:\s+[ivx\d]+)?|mini\s+projects?|suggestions\s+for\s+mini\s+projects|pointers|web\s+pages|start\s+course|course\s+contents|application\s*\d*|applications\s*\d*|schematic\s*\d*|hyperlink[-\s]*\d*|(?:fig(?:ure)?|eqns?|equations?|table)\.?\s*\(?\s*[\d.]+.*|\(?\s*(?:fig|eqn|table)\b.*|.*click\s+here.*|download\b.*|open\b.*|here|original\s+profile|[\w.-]+\.(?:pdf|ppt|pptx|doc|docx|mp4|html?))$/i;
 /** True only for a label that says something beyond module/lecture numbering or the filename itself. */
 export function meaningfulLabel(label,filename){
  const l=text(label);
  if(l.length<4||l.length>300||!/[a-z]{3}/i.test(l))return false;
  const base=String(filename||'').replace(/\.[a-z0-9]+$/i,'').toLowerCase();
  if(base&&[base,String(filename).toLowerCase()].includes(l.toLowerCase()))return false;
- return !GENERIC_LABEL.test(l);
+ return !GENERIC_LABEL.test(l)&&!MATERIAL_LABEL.test(l);
 }
