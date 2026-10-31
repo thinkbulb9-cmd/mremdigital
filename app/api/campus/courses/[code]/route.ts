@@ -12,8 +12,9 @@ export async function GET(req:NextRequest,ctx:{params:Promise<{code:string}>}){
  "WHERE r.availability='available' AND s.enabled=TRUE AND COALESCE(r.course_code,'UNCLASSIFIED')=$1",[code]);
  const meta=await db().query("SELECT title,department,instructor,institution,verified FROM course_catalog WHERE course_code=$1",[code]);
  const files=await db().query(
-  "SELECT r.id::text,r.name,r.ext,r.kind,r.size_bytes::text,r.module_no,r.lecture_no,r.semester_name "+
+  "SELECT r.id::text,r.name,r.ext,r.kind,r.size_bytes::text,r.module_no,r.lecture_no,r.semester_name,l.title AS lecture_title "+
   "FROM resources r JOIN storage_sources s ON s.id=r.source_id "+
+  "LEFT JOIN course_lectures l ON l.course_code=r.course_code AND l.module_no=r.module_no AND l.lecture_no=r.lecture_no AND l.verified=TRUE "+
   "WHERE r.availability='available' AND s.enabled=TRUE AND COALESCE(r.course_code,'UNCLASSIFIED')=$1 "+
   "ORDER BY r.module_no NULLS LAST,r.lecture_no NULLS LAST,r.name,r.id LIMIT $2 OFFSET $3",
   [code,limit,(page-1)*limit]);

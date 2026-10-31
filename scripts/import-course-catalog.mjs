@@ -21,6 +21,15 @@ try{
   const v=[code,title,dept,String(r.instructor||'').slice(0,160),String(r.institution||'').slice(0,160),
    String(r.title_source||'reviewed metadata').slice(0,160),verified];
   const result=await db.query(sql,v);if(result.rowCount)changed++;else skipped++;
+  if(Array.isArray(r.lectures))for(const l of r.lectures){
+    const m=Number(l?.module_no),n=Number(l?.lecture_no),name=String(l?.title||'').trim();
+    if(!Number.isSafeInteger(m)||!Number.isSafeInteger(n)||m<0||n<0||m>500||n>500||!name||name.length>300){skipped++;continue}
+    await db.query("INSERT INTO course_lectures(course_code,module_no,lecture_no,title,title_source,verified) VALUES($1,$2,$3,$4,$5,$6) "+
+      "ON CONFLICT(course_code,module_no,lecture_no) DO UPDATE SET title=EXCLUDED.title,title_source=EXCLUDED.title_source,verified=EXCLUDED.verified "+
+      "WHERE course_lectures.verified=FALSE OR EXCLUDED.verified=TRUE",
+      [code,m,n,name,String(l.title_source||'reviewed').slice(0,160),l.verified===true]);
+  }
+
  }
  console.log(JSON.stringify({changed,skipped,total:entries.length}));
 }finally{await db.end()}
