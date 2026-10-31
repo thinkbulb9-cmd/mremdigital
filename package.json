@@ -17,7 +17,10 @@
     "mappings:apply": "node --env-file=.env.local scripts/apply-mappings.mjs",
     "campus:scan": "node --env-file=.env.local scripts/scan-full-drive.mjs",
     "campus:metadata": "node --env-file=.env.local scripts/import-course-catalog.mjs",
-    "campus:export": "node --env-file=.env.local scripts/export-full-inventory.mjs"
+    "campus:export": "node --env-file=.env.local scripts/export-full-inventory.mjs",
+    "campus:departments": "node --env-file=.env.local scripts/map-nptel-departments.mjs",
+    "campus:audit": "node --env-file=.env.local scripts/audit-campus-index.mjs",
+    "campus:publish": "node --env-file=.env.local scripts/publish-course.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
