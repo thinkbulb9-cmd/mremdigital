@@ -38,18 +38,17 @@ const courses:Course[]=[
 const otherCollections=['Jan_Apr_2021','Jan_Apr_2023','Jan_Apr_2024','Jan-Apr-2022','Jul_Dec_2022','Jul_Dec_2023','Jul_Dec-2021','Web_courses'];
 const word=(kind:FileKind)=>kind==='video'?'MP4':kind==='pdf'?'PDF':kind==='html'?'HTML':'TXT';
 const infoFor=(kind:FileKind)=>kind==='video'?<Video size={16}/>:kind==='pdf'?<FileText size={16}/>:kind==='html'?<Code2 size={16}/>:<File size={16}/>;
-const official=(code:string)=>'https://nptel.ac.in/courses/'+code;
+
 function Brand({compact=false}:{compact?:boolean}){
  return <div className={'ml-brand '+(compact?'ml-compact':'')}>
-   <div className="ml-logo"><img src="https://mrem.ac.in/wp-content/uploads/2022/06/mrem-logo-copy-copy.png" alt="MREM official college emblem" onError={e=>{e.currentTarget.style.display='none';e.currentTarget.parentElement?.classList.add('ml-logo-fallback')}}/><GraduationCap className="ml-logo-fb" size={22}/></div>
-   <div><strong>MREM <span>DIGITAL LIBRARY</span></strong><small>Malla Reddy Engineering College & Management Sciences</small></div>
+  <div className="ml-logo ml-logo-fallback"><GraduationCap className="ml-logo-fb" size={23}/></div>
+  <div><strong>MREM <span>DIGITAL LIBRARY</span></strong><small>Malla Reddy Engineering College & Management Sciences</small></div>
  </div>;
 }
 export default function MremCoursePreview(){
  const [query,setQuery]=useState('');
  const [department,setDepartment]=useState('all');
  const [semester,setSemester]=useState('All semesters');
- const [server,setServer]=useState('server1');
  const [layout,setLayout]=useState<'grid'|'table'>('grid');
  const [section,setSection]=useState<'courses'|'files'>('courses');
  const [course,setCourse]=useState<Course|null>(null);
@@ -84,22 +83,19 @@ export default function MremCoursePreview(){
    <div className="ml-nav-label">LIBRARY</div>
    <button className={'ml-side-link '+(section==='courses'&&department==='all'&&!course?'is-active':'')} onClick={()=>{goHome();setDepartment('all')}}><LayoutGrid size={18}/> Discover courses <ChevronRight size={15}/></button>
    <button className={'ml-side-link '+(section==='files'?'is-active':'')} onClick={()=>{setSection('files');setCourse(null);setNavOpen(false)}}><FolderOpen size={18}/> File explorer <ChevronRight size={15}/></button>
-   <div className="ml-nav-label ml-nav-gap">STORAGE SOURCES</div>
-   <button className={'ml-source '+(server==='server1'?'active':'')} onClick={()=>{setServer('server1');setNavOpen(false)}}><HardDrive size={19}/><span><strong>Server 01</strong><small>MREM1 · E: Drive</small></span><span className="ml-source-dot"/></button>
-   <div className="ml-future"><Server size={17}/><span>Other servers</span><small>After pilot</small></div>
    <div className="ml-nav-label ml-nav-gap">DEPARTMENTS</div>
    <button className={'ml-dep '+(department==='all'?'active':'')} onClick={()=>changeDep('all')}><Layers3 size={16}/> All departments <span>{departments.length}</span></button>
    {departments.map(d=><button key={d.code} className={'ml-dep '+(department===d.code?'active':'')} onClick={()=>changeDep(d.code)}><span className="ml-dep-dot"/>{d.name}<span>{courses.filter(c=>c.department===d.code&&c.verified).length||'—'}</span></button>)}
-   <div className="ml-sidebar-bottom"><span className="ml-online-indicator"/><div><strong>Offline-first architecture</strong><small>Preview uses reference data</small></div></div>
+   <div className="ml-sidebar-bottom"><span className="ml-online-indicator"/><div><strong>Campus learning library</strong><small>Study materials and lessons</small></div></div>
   </aside>
   <div className="ml-stage">
    <header className="ml-header">
     <button className="ml-hamburger" aria-label="Open navigation" onClick={()=>setNavOpen(true)}><Menu size={20}/></button>
     <div className="ml-breadcrumb"><span onClick={goHome}>Digital Library</span><ChevronRight size={14}/><span>{course?course.title:section==='files'?'File explorer':'Course catalogue'}</span></div>
-    <div className="ml-header-right"><span className="ml-network"><span/> CAMPUS ACCESS</span><a href="https://nptel.ac.in/courses" target="_blank" rel="noopener noreferrer" className="ml-top-link">NPTEL reference <ExternalLink size={13}/></a><div className="ml-avatar"><GraduationCap size={18}/></div></div>
+    <div className="ml-header-right"><span className="ml-network"><span/> CAMPUS LEARNING</span><div className="ml-avatar"><GraduationCap size={18}/></div></div>
    </header>
    <main className="ml-main">
-    <div className="ml-preview-warning"><Info size={16}/><span><strong>UI CONCEPT · SAMPLE DATA.</strong> Course titles verified from NPTEL; E: drive mapping and media connections are not active. No login required in this preview.</span></div>
+    <div className="ml-preview-warning"><Info size={16}/><span><strong>STUDENT LMS DESIGN PREVIEW.</strong> Course titles are verified; lesson-to-file alignment is provisional. Only sample media plays here; college drives are not connected.</span></div>
     {!course?<><section className="ml-hero">
       <div className="ml-hero-copy">
        <div className="ml-overline"><span className="ml-orb"/> MREM LEARNING RESOURCE HUB</div>
@@ -110,31 +106,30 @@ export default function MremCoursePreview(){
       <div className="ml-hero-art" aria-hidden="true"><div className="ml-hero-ring ring1"/><div className="ml-hero-ring ring2"/><div className="ml-hero-card hc1"><Video size={20}/><div><strong>Video lessons</strong><small>Play & learn</small></div></div><div className="ml-hero-card hc2"><FileText size={20}/><div><strong>Study materials</strong><small>Read & download</small></div></div><div className="ml-hero-book"><BookOpen size={74} strokeWidth={1.2}/></div></div>
     </section>
     <div className="ml-stats">
-     <div><span className="ml-stat-icon"><HardDrive size={20}/></span><section><strong>Server 01</strong><small>Current sample storage</small></section></div>
-     <div><span className="ml-stat-icon"><BookOpen size={20}/></span><section><strong>3 verified</strong><small>NPTEL course titles</small></section></div>
-     <div><span className="ml-stat-icon"><Layers3 size={20}/></span><section><strong>{departments.length} departments</strong><small>Browse & explore</small></section></div>
-     <div><span className="ml-stat-icon"><MonitorPlay size={20}/></span><section><strong>Play · View · Save</strong><small>Browser-based experience</small></section></div>
-    </div>
-    <section className="ml-catalog" id="ml-listings">
-     <div className="ml-section-heading"><div><span className="ml-section-eyebrow">EXPLORE THE ARCHIVE</span><h2>{section==='files'?'File Explorer':selectedDep?.name||'Explore Courses'}</h2><p>{section==='files'?'Browse example lecture filenames observed in the screenshots.':'Discover verified NPTEL course titles and their matching screenshot folder codes.'}</p></div><div className="ml-view-toggle"><button className={layout==='grid'?'active':''} aria-label="Grid view" onClick={()=>setLayout('grid')}><Grid2X2 size={16}/></button><button className={layout==='table'?'active':''} aria-label="Table view" onClick={()=>setLayout('table')}><List size={17}/></button></div></div>
+ <div><span className="ml-stat-icon"><BookOpen size={20}/></span><section><strong>Organized courses</strong><small>Find your next subject</small></section></div>
+ <div><span className="ml-stat-icon"><Layers3 size={20}/></span><section><strong>Modules & lessons</strong><small>Study week by week</small></section></div>
+ <div><span className="ml-stat-icon"><MonitorPlay size={20}/></span><section><strong>Play & view</strong><small>Learn in the browser</small></section></div>
+ <div><span className="ml-stat-icon"><ArrowDownToLine size={20}/></span><section><strong>Download</strong><small>Save study resources</small></section></div>
+ </div>
+ <section className="ml-catalog" id="ml-listings">
+     <div className="ml-section-heading"><div><span className="ml-section-eyebrow">EXPLORE THE ARCHIVE</span><h2>{section==='files'?'File Explorer':selectedDep?.name||'Explore Courses'}</h2><p>{section==='files'?'Browse example lecture filenames observed in the screenshots.':'Discover courses, modules, and topic-wise lectures.'}</p></div><div className="ml-view-toggle"><button className={layout==='grid'?'active':''} aria-label="Grid view" onClick={()=>setLayout('grid')}><Grid2X2 size={16}/></button><button className={layout==='table'?'active':''} aria-label="Table view" onClick={()=>setLayout('table')}><List size={17}/></button></div></div>
      <div className="ml-filters">
-      <label className="ml-search"><Search size={19}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search course title, NPTEL ID, instructor, file..." /></label>
-      <label className="ml-select"><HardDrive size={16}/><select value={server} onChange={e=>setServer(e.target.value)}><option value="server1">Server 01 · E:</option></select><ChevronDown size={14}/></label>
+      <label className="ml-search"><Search size={19}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search course, topic, lecture or subject..." /></label>
+      
       {section==='courses'?<><label className="ml-select"><Clock3 size={16}/><select value={semester} onChange={e=>setSemester(e.target.value)}>{semesters.map(s=><option key={s} value={s}>{s}</option>)}</select><ChevronDown size={14}/></label><button className={'ml-verified '+(onlyVerified?'active':'')} onClick={()=>setOnlyVerified(v=>!v)}><CheckCircle2 size={16}/> Verified only</button></>:<label className="ml-select"><Filter size={16}/><select value={fileFormat} onChange={e=>setFileFormat(e.target.value)}>{['All formats','MP4','PDF','HTML'].map(s=><option key={s}>{s}</option>)}</select><ChevronDown size={14}/></label>}
      </div>
-     <div className="ml-resultline"><span>{section==='courses'?filtered.length:raw.length} <strong>{section==='courses'?'course entries':'example files'}</strong></span><span>Source: MREM1 (E:) · Jan_Apr_2021</span></div>
+     <div className="ml-resultline"><span>{section==='courses'?filtered.length:raw.length} <strong>{section==='courses'?'course entries':'example files'}</strong></span><span>Browse subject-wise learning materials</span></div>
      {section==='courses'?(filtered.length?(layout==='grid'?<div className="ml-course-grid">{filtered.map(c=><CourseCard key={c.code} course={c} onClick={()=>selectCourse(c)}/>)}</div>:<div className="ml-table"><div className="ml-thead"><span>COURSE</span><span>NPTEL ID</span><span>INSTRUCTOR</span><span>STATUS</span></div>{filtered.map(c=><button key={c.code} className="ml-trow" onClick={()=>selectCourse(c)}><span><strong>{c.title}</strong><small>{departments.find(d=>d.code===c.department)?.name}</small></span><span>{c.code}</span><span>{c.instructor}</span><span>{c.verified?'Metadata verified':'Review needed'}</span></button>)}</div>):<EmptyState onReset={()=>{setDepartment('all');setQuery('');setSemester('All semesters')}}/>):raw.length?<div className="ml-table ml-files"><div className="ml-thead"><span>FILE / RESOURCE</span><span>COURSE CODE</span><span>TYPE</span><span>ACTION</span></div>{raw.map(x=><div key={x.id} className="ml-trow"><span className="ml-file-desc">{infoFor(x.kind)}<span><strong>{x.name}</strong><small>{x.course.title}</small></span></span><span>{x.course.code}</span><span>{word(x.kind)}</span><span><button className="ml-mini-action" onClick={()=>viewResource(x,x.course)}><Play size={14}/> Sample player</button></span></div>)}</div>:<EmptyState onReset={()=>{setDepartment('all');setQuery('');setFileFormat('All formats')}}/>}
     </section>
-    <section className="ml-source-section"><div><h2>Storage & folder structure</h2><p>Browse original disk folders without changing any source filenames.</p></div><div className="ml-storage-card"><div className="ml-diskmark"><HardDrive size={24}/></div><div><strong>Server 01 — MREM1 (E:)</strong><small>Windows physical drive · screenshot reference</small></div><span className="ml-diskbadge">PILOT SOURCE</span></div><div className="ml-folderchips">{otherCollections.map(f=><span key={f}><Folder size={15}/>{f}</span>)}</div><div className="ml-meta-note"><Info size={16}/> These folder names are transcribed from the screenshot; a direct Windows scan is required to discover every actual file.</div></section>
-   </>:<><div className="ml-backline"><button onClick={()=>setCourse(null)}><ArrowLeft size={17}/> Back to all courses</button><span>Server 01 / Jan_Apr_2021 / {course.code}</span></div>
+    </>:<><div className="ml-backline"><button onClick={()=>setCourse(null)}><ArrowLeft size={17}/> Back to all courses</button><span>Academic Courses / {course.code}</span></div>
     <div className={'ml-course-hero ml-tonal-'+course.tone}>
-     <div><div className="ml-course-meta"><span>{departments.find(d=>d.code===course.department)?.name}</span><span>NPTEL ID: {course.code}</span></div><h1>{course.title}</h1><p>{course.description}</p><div className="ml-prof"><span><GraduationCap size={17}/> {course.instructor}</span><span><School size={17}/> {course.school}</span></div><div className="ml-course-actions"><a href={official(course.code)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/> NPTEL course page</a><span>{course.verified?'Verified title':'Verification needed'}</span></div></div><div className="ml-course-large-symbol"><BookOpen size={90} strokeWidth={1}/></div>
+     <div><div className="ml-course-meta"><span>{departments.find(d=>d.code===course.department)?.name}</span><span>NPTEL ID: {course.code}</span></div><h1>{course.title}</h1><p>{course.description}</p><div className="ml-prof"><span><GraduationCap size={17}/> {course.instructor}</span><span><School size={17}/> {course.school}</span></div><div className="ml-course-actions"><span>{course.verified?'Verified course title':'Course title pending verification'}</span></div></div><div className="ml-course-large-symbol"><BookOpen size={90} strokeWidth={1}/></div>
     </div>
     <div className="ml-detail-grid"><div className="ml-lectures"><div className="ml-section-heading"><div><span className="ml-section-eyebrow">RESOURCES & LECTURES</span><h2>Course content</h2><p>Example filenames and viewers. Real disk streaming will be enabled after the Windows indexing test.</p></div></div>
       {activeResources.length?<div className="ml-resource-list">{activeResources.map((r,i)=><div className="ml-resource-row" key={r.id}><div className={'ml-file-icon type-'+r.kind}>{infoFor(r.kind)}</div><div className="ml-resource-info"><strong>{r.display}</strong><small>{r.name} · {r.module}</small></div><span className="ml-format">{word(r.kind)}</span><div className="ml-resource-actions"><button onClick={()=>viewResource(r,course)}>{r.kind==='video'?<Play size={15}/>:<Eye size={15}/>} {r.kind==='video'?'Play':'View'}</button><button onClick={()=>viewResource(r,course)}><ArrowDownToLine size={15}/> Sample</button></div></div>)}</div>:<div className="ml-no-lessons"><FolderOpen size={34}/><h3>File mapping not completed</h3><p>This course ID is visible in the supplied screenshot, but its lecture files haven't been indexed from the Windows E: drive.</p><a href={official(course.code)} target="_blank" rel="noopener noreferrer">Open verified NPTEL reference <ExternalLink size={14}/></a></div>}
     </div><aside className="ml-course-side"><h3>Course details</h3><dl><dt>NPTEL course ID</dt><dd>{course.code}</dd><dt>Department</dt><dd>{departments.find(d=>d.code===course.department)?.name}</dd><dt>Academic archive</dt><dd>Jan–Apr 2021</dd><dt>Source drive</dt><dd>Server 01 · MREM1 (E:)</dd><dt>Lectures detected</dt><dd>{course.code==='101101086'?'Example filenames from screenshot':'Awaiting disk scan'}</dd></dl><div className="ml-path"><span>SCREENSHOT PATH REFERENCE</span><code>E:\{course.folder.replaceAll('/','\\')}</code></div><div className="ml-card-notice"><ShieldCheck size={17}/> No login interface in final campus version; actual storage remains read-only.</div></aside></div>
    </>}
-   <footer className="ml-footer"><span>© MREM Digital Library · Interface concept</span><span>Inspired by NPTEL academic browsing · Content titles credited to NPTEL · Actual disk mapping pending</span></footer>
+   <footer className="ml-footer"><span>© MREM Digital Library · Student LMS</span><span>College-hosted lessons · No external redirects</span></footer>
    </main>
   </div>
   {modal&&<div className="ml-modal-shade" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="ml-modal" role="dialog" aria-modal="true" aria-label={'Sample preview: '+modal.resource.name}>
@@ -145,6 +140,6 @@ export default function MremCoursePreview(){
  </div>;
 }
 function CourseCard({course,onClick}:{course:Course;onClick:()=>void}){
- return <button className="ml-course-card" onClick={onClick}><div className={'ml-cover ml-tonal-'+course.tone}><div className="ml-cover-bg"><span/><span/><span/></div><div className="ml-cover-label">NPTEL COURSE</div><div className="ml-cover-icon"><BookOpen size={48} strokeWidth={1.2}/></div><span className="ml-cover-code">{course.code}</span></div><div className="ml-course-content"><div className="ml-course-tags"><span>{course.department}</span><span className={course.verified?'verified':'pending'}>{course.verified?<CheckCircle2 size={12}/>:<Clock3 size={12}/>} {course.verified?'Verified':'To verify'}</span></div><h3>{course.title}</h3><p>{course.instructor} · {course.school}</p><div className="ml-course-footer"><span><HardDrive size={14}/> Server 01</span><span>Explore course <ArrowRight size={16}/></span></div></div></button>;
+ return <button className="ml-course-card" onClick={onClick}><div className={'ml-cover ml-tonal-'+course.tone}><div className="ml-cover-bg"><span/><span/><span/></div><div className="ml-cover-label">ACADEMIC COURSE</div><div className="ml-cover-icon"><BookOpen size={48} strokeWidth={1.2}/></div><span className="ml-cover-code">{course.code}</span></div><div className="ml-course-content"><div className="ml-course-tags"><span>{course.department}</span><span className={course.verified?'verified':'pending'}>{course.verified?<CheckCircle2 size={12}/>:<Clock3 size={12}/>} {course.verified?'Verified':'To verify'}</span></div><h3>{course.title}</h3><p>{course.instructor} · {course.school}</p><div className="ml-course-footer"><span><BookOpen size={14}/> Course {course.code}</span><span>Explore course <ArrowRight size={16}/></span></div></div></button>;
 }
-function EmptyState({onReset}:{onReset:()=>void}){return <div className="ml-empty"><Search size={29}/><h3>No matching verified catalogue entries</h3><p>Only courses identifiable from the supplied screenshot are shown. More departments will populate after the Windows drive scan.</p><button onClick={onReset}>Clear filters <ArrowRight size={15}/></button></div>}
+function EmptyState({onReset}:{onReset:()=>void}){return <div className="ml-empty"><Search size={29}/><h3>No matching verified catalogue entries</h3><p>More courses and topics will appear after the campus library catalogue is indexed.</p><button onClick={onReset}>Clear filters <ArrowRight size={15}/></button></div>}
