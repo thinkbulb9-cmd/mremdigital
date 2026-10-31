@@ -1,0 +1,29 @@
+[
+  {
+    "course_code": "101101086",
+    "title": "Introduction to Launch Vehicle Analysis and Design",
+    "department": "Aerospace Engineering",
+    "instructor": "Prof. Ashok Joshi",
+    "institution": "IIT Bombay",
+    "verified": true,
+    "title_source": "Official NPTEL course detail"
+  },
+  {
+    "course_code": "101101087",
+    "title": "Lighter than Air Systems",
+    "department": "Aerospace Engineering",
+    "instructor": "Prof. Rajkumar S. Pant",
+    "institution": "IIT Bombay",
+    "verified": true,
+    "title_source": "Official NPTEL course detail"
+  },
+  {
+    "course_code": "101104086",
+    "title": "Computational Science in Engineering",
+    "department": "Aerospace Engineering",
+    "instructor": "Prof. Ashok De",
+    "institution": "IIT Kanpur",
+    "verified": true,
+    "title_source": "Official NPTEL catalogue"
+  }
+]

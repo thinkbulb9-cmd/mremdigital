@@ -14,7 +14,9 @@
     "mac:video-test": "bash scripts/mac-video-test.sh",
     "test:stream": "node --experimental-strip-types --test scripts/test-range-stream.mjs",
     "staff:setup": "node --env-file=.env.local scripts/staff-setup.mjs",
-    "mappings:apply": "node --env-file=.env.local scripts/apply-mappings.mjs"
+    "mappings:apply": "node --env-file=.env.local scripts/apply-mappings.mjs",
+    "campus:scan": "node --env-file=.env.local scripts/scan-full-drive.mjs",
+    "campus:metadata": "node --env-file=.env.local scripts/import-course-catalog.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
