@@ -12,3 +12,13 @@ CREATE INDEX IF NOT EXISTS idx_resources_campus_module ON resources(course_code,
 CREATE INDEX IF NOT EXISTS idx_course_catalog_department ON course_catalog(department);
 
 CREATE TABLE IF NOT EXISTS course_lectures(course_code TEXT NOT NULL,module_no INTEGER NOT NULL,lecture_no INTEGER NOT NULL,title TEXT NOT NULL,title_source TEXT NOT NULL DEFAULT 'reviewed',verified BOOLEAN NOT NULL DEFAULT FALSE,PRIMARY KEY(course_code,module_no,lecture_no));
+
+-- Explicit college publication review, independent of title verification.
+CREATE TABLE IF NOT EXISTS campus_publications(
+ course_code TEXT PRIMARY KEY CHECK(course_code ~ '^[0-9]{9}$'),
+ approved BOOLEAN NOT NULL DEFAULT FALSE,
+ reviewed_by TEXT NOT NULL DEFAULT '',
+ reviewed_at TIMESTAMPTZ,
+ notes TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_campus_publications_approved ON campus_publications(course_code) WHERE approved=TRUE;
