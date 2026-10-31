@@ -51,7 +51,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   file=q.rows[0]||null;
  }
  if(!file)return new Response('Not found',{status:404});
- if(campusMode()&&!['.mp4','.webm','.mov','.m4v','.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.webp','.doc','.docx','.ppt','.pptx','.xls','.xlsx','.csv','.zip','.rar','.7z'].includes(file.ext))return new Response('File type not permitted',{status:415});
+ if(campusMode()&&!['.mp4','.webm','.mov','.m4v','.avi','.mkv','.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.webp','.doc','.docx','.ppt','.pptx','.xls','.xlsx','.csv','.zip','.rar','.7z'].includes(file.ext))return new Response('File type not permitted',{status:415});
  let absolute:string,size:number;
  try{({absolute,size}=await resolveStoredFile(file.root_path,file.rel_path));}
  catch{return new Response('File unavailable on attached storage',{status:404});}

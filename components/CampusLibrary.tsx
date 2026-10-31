@@ -9,6 +9,7 @@ type Listing={items:Course[];departments:string[];total:number;page:number;limit
 const fileUrl=(id:string,inline=false)=>'/api/files/'+encodeURIComponent(id)+'/download'+(inline?'?inline=1':'');
 const size=(s:string)=>{const n=Number(s);return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B'};
 const supportedVideo=(e:string)=>['.mp4','.m4v','.webm','.mov'].includes(e.toLowerCase());
+const supportedDownload=(e:string)=>['.mp4','.m4v','.webm','.mov','.avi','.mkv','.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.webp','.doc','.docx','.ppt','.pptx','.xls','.xlsx','.csv','.zip','.rar','.7z'].includes(e.toLowerCase());
 const supportedPreview=(e:string)=>supportedVideo(e)||['.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.webp'].includes(e.toLowerCase());
 async function getJSON<T>(url:string,signal?:AbortSignal):Promise<T>{
  const res=await fetch(url,{signal,cache:'no-store'});
@@ -93,7 +94,7 @@ export default function CampusLibrary(){
         {expanded.includes(key)&&<div className="cl-resources">{files.map(f=><div className="cl-resource" key={f.id}>
          <span className="cl-file-icon">{f.kind==='Video'?<Video size={20}/>:<FileText size={20}/>}</span>
          <div className="cl-resource-info"><strong>{f.lecture_title|| (f.lecture_no===null?f.name:'Lecture '+String(f.lecture_no).padStart(2,'0'))}</strong><small>{f.name} · {f.semester_name||f.kind} · {size(f.size_bytes)}</small></div>
-         <div className="cl-resource-actions">{supportedPreview(f.ext)&&<button onClick={()=>setPreview(f)}>{supportedVideo(f.ext)?<Play size={16}/>:<Eye size={16}/>} {supportedVideo(f.ext)?'Play':'View'}</button>}<a href={fileUrl(f.id)} download><Download size={16}/> Download</a></div>
+         <div className="cl-resource-actions">{supportedPreview(f.ext)&&<button onClick={()=>setPreview(f)}>{supportedVideo(f.ext)?<Play size={16}/>:<Eye size={16}/>} {supportedVideo(f.ext)?'Play':'View'}</button>}{supportedDownload(f.ext)?<a href={fileUrl(f.id)} download><Download size={16}/> Download</a>:<span className="cl-disabled-download">Unsupported type</span>}</div>
         </div>)}</div>}
        </div>):<div className="cl-empty">No indexed files found for this course.</div>}
        <div className="cl-pagination"><span>Page {detailPage} / {detailCount}</span><div><button disabled={detailPage===1} onClick={()=>{setDetailPage(p=>p-1);window.scrollTo({top:0})}}>Previous</button><button disabled={detailPage>=detailCount} onClick={()=>{setDetailPage(p=>p+1);window.scrollTo({top:0})}}>Next 100</button></div></div>
