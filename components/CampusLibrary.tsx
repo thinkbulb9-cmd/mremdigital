@@ -9,7 +9,7 @@ type Listing={items:Course[];departments:string[];total:number;page:number;limit
 const fileUrl=(id:string,inline=false)=>'/api/files/'+encodeURIComponent(id)+'/download'+(inline?'?inline=1':'');
 const groupName=(f:Resource)=>{
  const semester=(f.semester_name||'').replace(/[_-]/g,' ').trim();
- const module=groupName(f);
+ const module=f.module_no===null?'Other Materials':'Module '+String(f.module_no).padStart(2,'0');
  return semester?semester+' / '+module:module;
 };
 const size=(s:string)=>{const n=Number(s);return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B'};
@@ -54,7 +54,7 @@ export default function CampusLibrary(){
  const groups=useMemo(()=>{
   const map=new Map<string,Resource[]>();
   for(const f of details?.items||[]){
-   const name=f.module_no===null?'Other Materials':'Module '+String(f.module_no).padStart(2,'0');
+   const name=groupName(f);
    if(!map.has(name))map.set(name,[]);
    map.get(name)!.push(f);
   }
