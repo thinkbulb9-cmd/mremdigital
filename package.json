@@ -23,7 +23,8 @@
     "campus:publish": "node --env-file=.env.local scripts/publish-course.mjs",
     "campus:review:export": "node --env-file=.env.local scripts/export-course-hod-review.mjs",
     "campus:review:import": "node --env-file=.env.local scripts/import-course-hod-review.mjs",
-    "campus:repeats": "node --env-file=.env.local scripts/export-possible-repeats.mjs"
+    "campus:repeats": "node --env-file=.env.local scripts/export-possible-repeats.mjs",
+    "campus:html:extract": "node --env-file=.env.local scripts/extract-legacy-html-for-github.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
