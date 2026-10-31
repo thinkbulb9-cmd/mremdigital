@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { readFile } from 'node:fs/promises';
+import { campusMode } from '@/lib/campus-mode';
 import { createRangedFileStream } from '@/lib/range-file-stream';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -8,7 +10,7 @@ import { isMacPilot, getMacPilotFile } from '@/lib/mac-pilot';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}){
- if(!(await authorized()))return new Response('Unauthorized',{status:401});
+ if(!campusMode()&&!(await authorized()))return new Response('Unauthorized',{status:401});
  const {id}=await context.params;
  if(!/^\d+$/.test(id))return new Response('Bad file ID',{status:400});
  if(demoEnabled()){
@@ -40,16 +42,33 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
  if(isMacPilot()){
   file=await getMacPilotFile(id);
  }else{
-  const q=await db().query(`SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
-   JOIN resource_assignments a ON a.resource_id=r.id
-   WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
+  const q=await db().query(campusMode()?
+   `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
+    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`:
+   `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
+    JOIN resource_assignments a ON a.resource_id=r.id
+    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
   file=q.rows[0]||null;
  }
  if(!file)return new Response('Not found',{status:404});
+ if(campusMode()&&!['.mp4','.webm','.mov','.m4v','.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.webp','.doc','.docx','.ppt','.pptx','.xls','.xlsx','.csv','.zip','.rar','.7z'].includes(file.ext))return new Response('File type not permitted',{status:415});
  let absolute:string,size:number;
  try{({absolute,size}=await resolveStoredFile(file.root_path,file.rel_path));}
  catch{return new Response('File unavailable on attached storage',{status:404});}
  if(!Number.isSafeInteger(size))return new Response('File too large for pilot file server',{status:501});
+ // Legacy HTML may contain active JavaScript; render escaped source, never execute it with campus origin privileges.
+ if(campusMode()&&req.nextUrl.searchParams.get('inline')==='1'&&['.html','.htm'].includes(file.ext)){
+  if(size>512*1024)return new Response('HTML is too large to preview safely. Use Download.',{status:413});
+  const raw=await readFile(absolute,'utf8');
+  const escaped=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const html='<!doctype html><meta charset="utf-8"><title>Safe HTML source preview</title>'+
+   '<style>body{font:13px/1.6 ui-monospace,Consolas,monospace;background:#f8fafc;color:#1e293b;padding:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>'+
+   '<h3>Static HTML source preview (scripts disabled)</h3><pre>'+escaped+'</pre>';
+  return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private,no-store',
+    'X-Content-Type-Options':'nosniff',
+    'Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'"}});
+ }
+
  const range=req.headers.get('range');
  let start=0,end=size-1;
  if(range){

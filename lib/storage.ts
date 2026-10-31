@@ -20,5 +20,7 @@ export const mimeFor=(ext:string):string=>({
  '.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  '.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation',
  '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
- '.zip':'application/zip'
+ '.html':'text/html; charset=utf-8','.htm':'text/html; charset=utf-8',
+ '.xls':'application/vnd.ms-excel','.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+ '.csv':'text/csv; charset=utf-8','.zip':'application/zip'
 } as Record<string,string>)[ext]||'application/octet-stream';
