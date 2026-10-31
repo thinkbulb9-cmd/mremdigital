@@ -12,6 +12,8 @@ if($LASTEXITCODE -ne 0 -or $remote -notmatch '(^|[:/])thinkbulb9-cmd/mremdigital
  throw 'Wrong GitHub origin. Refusing to upload.'
 }
 if(-not(Test-Path -LiteralPath '.env.local')){throw 'Missing .env.local. Do not upload database credentials.'}
+& node --test .\scripts\test-legacy-html-parser.mjs
+if($LASTEXITCODE -ne 0){throw 'Legacy HTML parser self-tests failed; upload stopped.'}
 Write-Host 'Reading legacy academic index.html files only; original E: files remain untouched.' -ForegroundColor Cyan
 & npm run campus:html:extract -- $SourceId
 if($LASTEXITCODE -ne 0){throw 'Extraction failed. Nothing was uploaded.'}
