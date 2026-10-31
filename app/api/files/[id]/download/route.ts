@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'node:fs/promises';
 import { campusMode } from '@/lib/campus-mode';
+import { approvalRequired } from '@/lib/campus-publication';
 import { createRangedFileStream } from '@/lib/range-file-stream';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -44,7 +45,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
  }else{
   const q=await db().query(campusMode()?
    `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
-    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`:
+    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE ${approvalRequired()?"AND EXISTS(SELECT 1 FROM campus_publications p WHERE p.course_code=r.course_code AND p.approved=TRUE)":""}`:
    `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
     JOIN resource_assignments a ON a.resource_id=r.id
     WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
