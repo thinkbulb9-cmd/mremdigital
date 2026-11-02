@@ -31,7 +31,10 @@
     "test:nptel": "node --test scripts/nptel-reconciliation/test.mjs",
     "nptel:fetch": "node --env-file=.env.local scripts/nptel-reconciliation/fetch-official.mjs",
     "nptel:reconcile": "node --env-file=.env.local scripts/nptel-reconciliation/reconcile.mjs",
-    "nptel:workbook": "node scripts/nptel-reconciliation/workbook.mjs"
+    "nptel:workbook": "node scripts/nptel-reconciliation/workbook.mjs",
+    "nptel:official-titles": "node --env-file=.env.local scripts/nptel-reconciliation/apply-official-titles.mjs",
+    "nptel:lecture-titles": "node --env-file=.env.local scripts/nptel-reconciliation/import-lecture-titles.mjs",
+    "campus:reports": "node --env-file=.env.local scripts/nptel-reconciliation/drive-reports.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
