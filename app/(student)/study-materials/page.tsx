@@ -1,25 +1,21 @@
 import Link from 'next/link';
-import {Empty,PageHead,Pager,courseName,withQuery} from '@/components/lms/ui';
-import {sizeOf} from '@/lib/format';
 import {studyMaterials} from '@/lib/campus-catalog';
-export const metadata={title:'Study materials · MREM Digital Learning Library'};
+import {sizeOf} from '@/lib/format';
+import {withQuery} from '@/components/lms/ui';
+import {XpBreadcrumb,XpEmpty,XpHeading,XpPager,XpResourceLine,courseTitle} from '@/components/lms/LiveExperienceParts';
 type P={searchParams:Promise<{q?:string;type?:string;page?:string}>};
-/** PDFs and documents from course folders, each opening at its lesson URL inside its course. */
+export const metadata={title:'Study Materials · MREM Digital Learning Library'};
 export default async function StudyMaterials({searchParams}:P){
  const sp=await searchParams,type=sp.type==='pdf'||sp.type==='document'?sp.type:'';
- const r=await studyMaterials({q:sp.q,type,page:Number(sp.page)||1});
- const href=(p:Record<string,string|number|undefined>)=>withQuery('/study-materials',{q:sp.q,type,...p});
- return <>
-  <PageHead crumbs={[['Home','/'],['Study materials']]} eyebrow="Study materials" title="Study materials" lead="PDF notes, slides and documents from the course folders. Each opens inside its course."/>
-  <div className="toolbar">
-   <form className="field" action="/study-materials"><input name="q" defaultValue={sp.q||''} aria-label="Search study materials" placeholder="Search by file name…"/>{type&&<input type="hidden" name="type" value={type}/>}</form>
-   <div className="chips" role="group" aria-label="Material type">{[['','All'],['pdf','PDF'],['document','Text and documents']].map(([k,l])=>
-    <Link key={k} className="chip" href={href({type:k,page:undefined})} aria-current={type===k?'true':undefined}>{l}</Link>)}</div>
-  </div>
-  {r.items.length?<div className="list">{r.items.map(x=><Link key={x.id} className="row" href={`/courses/${x.code}/lessons/${x.id}`}>
-   <span className="row-n">{String(x.ext).replace('.','').toUpperCase().slice(0,4)}</span>
-   <span className="row-t"><strong>{x.name}</strong><small>{[x.course?courseName(x.course):'Course ID '+x.code,x.course?.department,sizeOf(x.size)].filter(Boolean).join(' · ')}</small></span></Link>)}</div>:
-   <Empty title="No study materials found" text="Try another search or type."/>}
-  <Pager page={r.page} pages={r.pages} total={r.total} unit="files" href={p=>href({page:p})}/>
- </>;
+ const data=await studyMaterials({q:sp.q,type,page:Number(sp.page)||1});
+ const href=(p:number)=>withQuery('/study-materials',{q:sp.q,type,page:p});
+ return <div className="xp-container xp-inner"><XpBreadcrumb links={[{text:'Discover',href:'/'},{text:'Study Materials'}]}/>
+  <XpHeading eyebrow="STUDY MATERIALS" title="Read, revise and explore." description="Original, approved PDFs and documents from the college course catalogue."/>
+  <form className="xp-filter-toolbar" action="/study-materials"><label><span className="sr-only">Search study materials</span><input name="q" defaultValue={sp.q||''} placeholder="Search by original file name"/></label>
+   <select name="type" defaultValue={type} aria-label="Resource type"><option value="">All materials</option><option value="pdf">PDF</option><option value="document">Text & documents</option></select>
+   <button type="submit">Search</button>{(sp.q||type)&&<Link href="/study-materials">Clear</Link>}</form>
+  {data.items.length?<div className="xp-lesson-list xp-material-list">{data.items.map((r,i)=><XpResourceLine key={r.id} code={r.code} id={r.id} index={r.ext.replace('.','').toUpperCase().slice(0,4)} title={r.name} details={[r.course?courseTitle(r.course):'Course ID '+r.code,r.course?.department,sizeOf(r.size)].filter(Boolean).join(' · ')}/>)}</div>:
+   <XpEmpty title="No matching study materials" description="Try another resource type or filename."/>}
+  <XpPager page={data.page} pages={data.pages} total={data.total} href={href}/>
+ </div>;
 }
