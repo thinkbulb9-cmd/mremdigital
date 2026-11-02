@@ -302,8 +302,17 @@ try{
     "modified_at=EXCLUDED.modified_at,run_key=EXCLUDED.run_key,updated_at=now()",[src.id,runKey,J(sources)]);
    for(let b=done;b<batches.length;b++){
     const part=batches[b].map(k=>byCode.get(k));
-    const recs=part.flatMap(p=>p.records),lnk=part.flatMap(p=>p.links),ttl=part.flatMap(p=>p.titles);
-    const lec=part.flatMap(p=>p.lectures),cfl=part.flatMap(p=>p.conflicts),plans=part.map(p=>p.plan).filter(Boolean);
+    // One row per conflict key: a page may list a course or link a file twice, and an upsert cannot touch a row twice.
+    const uniq=(rows,key)=>[...new Map(rows.map(r=>[key(r),r])).values()];
+    const recs=uniq(part.flatMap(p=>p.records),r=>[r.semester_root,r.course_code,r.source_rel_path].join('\0'));
+    const lnk=uniq(part.flatMap(p=>p.links),l=>l.source_rel_path+'\0'+l.ref),ttl=uniq(part.flatMap(p=>p.titles),t=>String(t.resource_id));
+    // course_lectures has one title per module/lecture for all semesters: when semesters disagree, keep only the
+    // per-file titles (legacy_lecture_titles), which already carry each semester's own name.
+    const lecKey=(l)=>l.course_code+'\0'+l.module_no+'\0'+l.lecture_no,lecTitles=new Map();
+    for(const l of part.flatMap(p=>p.lectures))lecTitles.set(lecKey(l),[...(lecTitles.get(lecKey(l))||[]),l]);
+    const lec=[...lecTitles.values()].filter(v=>new Set(v.map(l=>l.title)).size===1).map(v=>v[0]);
+    const cfl=uniq(part.flatMap(p=>p.conflicts),c=>[c.conflict_type,c.course_code,c.semester_root,c.field,c.source_rel_path,c.extracted_value].join('\0'));
+    const plans=part.map(p=>p.plan).filter(Boolean);
     await db.query('BEGIN');
     try{
      if(recs.length)await db.query("INSERT INTO legacy_course_records(source_id,semester_root,course_code,source_rel_path,discipline_folder,title,discipline,coordinators,course_type,institution,inventory_files,confidence,run_key) "+

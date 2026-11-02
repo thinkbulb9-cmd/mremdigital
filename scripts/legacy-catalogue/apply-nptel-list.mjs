@@ -63,7 +63,7 @@ try{
  const tally=(rows,k)=>rows.reduce((o,r)=>(o[r[k]]=(o[r[k]]||0)+1,o),{});
  const summary={mode:opt.apply?'apply':'dry-run',list_rows:list.length,inventory_course_ids:inv.length,changes:tally(changes,'kind'),skipped:tally(skipped,'reason')};
  if(opt.apply&&changes.length){
-  const suffix=new Date().toISOString().replace(/\D/g,'').slice(0,14);
+  const suffix=new Date().toISOString().replace(/\D/g,'').slice(0,14)+'_'+opt.source.replace(/[^a-z0-9_]/gi,'');
   await db.query('BEGIN');
   try{
    await db.query(`CREATE TABLE nptel_list_backup_${suffix}_course_catalog AS TABLE course_catalog`);
