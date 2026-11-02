@@ -11,6 +11,7 @@ import {probeRoot,verdict,recordAvailability} from './storage-identity.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL is required');
 const db=new pg.Client({connectionString:process.env.DATABASE_URL});
 const sourceId=process.argv[2]||'server1',BATCH=250;
+const SYSTEM_FOLDERS=/^(\$recycle\.bin|system volume information|recovery|\$windows\.~bt|\$windows\.~ws|\$sysreset)$/i;
 const kindOf=(ext)=>['.mp4','.m4v','.webm','.mov','.avi','.mkv'].includes(ext)?'Video':
  ['.pdf','.doc','.docx','.txt','.md','.ppt','.pptx','.xls','.xlsx','.csv'].includes(ext)?'Document':
  ['.html','.htm'].includes(ext)?'HTML':['.jpg','.jpeg','.png','.webp'].includes(ext)?'Image':
@@ -73,6 +74,8 @@ try{
    try{
     for await(const entry of dir){
      if(entry.isSymbolicLink())continue;
+     // Windows keeps these at a volume root; they are not academic content and System Volume Information is unreadable.
+     if(!rel&&SYSTEM_FOLDERS.test(entry.name))continue;
      const childRel=rel?rel+'/'+entry.name:entry.name;
      if(entry.isDirectory()){stack.push(childRel);continue}
      if(!entry.isFile())continue;
