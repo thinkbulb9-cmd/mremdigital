@@ -3,14 +3,15 @@
  * Reads only the reports written by reconcile.mjs, the parsed PDF table and the official catalogue cache; touches neither
  * the archive nor the database. Every count on the Summary sheet is also an Excel formula over the detail sheets.
  */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import {parseArgs} from 'node:util';
-import {workbook,colName,STYLE} from './xlsx.mjs';
+import {workbook,readXlsx,colName,STYLE} from './xlsx.mjs';
 
 const {values:opt}=parseArgs({options:{dir:{type:'string',default:'C:/MREM/inventory/nptel-reconciliation'},pdf:{type:'string'},
- web:{type:'string'},out:{type:'string'}}});
+ web:{type:'string'},out:{type:'string'},archive:{type:'string'}}});
 if(!opt.pdf)throw Error('--pdf <parsed NPTEL Courses PDF .json or .json.gz> required');
 const web=opt.web||path.join(opt.dir,'web-cache'),out=opt.out||path.join(opt.dir,'NPTEL_FINAL_RECONCILIATION_ANALYSIS.xlsx');
 
@@ -127,6 +128,57 @@ const eRows=r01.rows.map(r=>{const h=m02.get(k3(r))||{},c=m05.get(k3(r))||{};
   Verification_Status:byId.get(r.Course_ID)?.Verification_Status,Videos:num(c.Videos_Count),PDFs:num(c.PDFs_Count),Other_Documents:num(c.Other_Documents_Count),
   HTML_Files:num(c.HTML_Count),Total_Files:num(c.Total_Files),Content_Availability_Status:c.Content_Availability_Status||''}});
 
+// Previous lists kept inside the academic folders (read only): folder-tree snapshots and subjectId/COUNT(*) exports,
+// each compared with the course folders that are in the same academic folder today.
+const archive=opt.archive||r01.rows[0]?.Drive||'';
+const prevLists=[],prevRows=[];
+const nowIn=group(eRows,'Academic_Folder');
+for(const s of uniq(r01.rows.map(r=>r.Academic_Folder)).sort()){
+ let entries=[];try{entries=fs.readdirSync(path.join(archive,s),{withFileTypes:true})}catch{continue}
+ for(const e of entries.filter(e=>e.isFile()&&/\.(csv|xlsx|txt)$/i.test(e.name)).sort((a,b)=>a.name.localeCompare(b.name))){
+  const file=path.join(archive,s,e.name),buf=fs.readFileSync(file),st=fs.statSync(file),ids=new Map();
+  const info={List_File:s+'\\'+e.name,Academic_Folder:s,Last_Modified:st.mtime.toISOString().slice(0,10),Size_Bytes:st.size,
+   SHA256:crypto.createHash('sha256').update(buf).digest('hex'),List_Type:''};
+  if(/\.xlsx$/i.test(e.name)){
+   const sheets=readXlsx(buf),sh=sheets.find(x=>x.rows.some(r=>r.some(c=>/subjectid/i.test(c))))||sheets[0]||{name:'',rows:[]};
+   const hi=sh.rows.findIndex(r=>r.some(c=>/subjectid/i.test(c))),h=sh.rows[hi]||[],ci=h.findIndex(c=>/subjectid/i.test(c)),ni=h.findIndex(c=>/count/i.test(c));
+   for(const r of sh.rows.slice(hi+1)){const id=String(r[ci]??'').trim();if(/^\d{9}$/.test(id))ids.set(id,{files:ni>=0&&r[ni]!==''?num(r[ni]):'',mp4:''})}
+   info.List_Type=ci>=0?'Database export: subjectId with COUNT(*) per course (sheet "'+sh.name+'")':'Spreadsheet without a subjectId column';
+  }else{
+   const t=buf.toString('utf8'),lines=t.split(/\r?\n/);
+   if(lines.some(l=>/^\s*\|-{3}\d{9}\s*$/.test(l))){
+    let cur=null;
+    for(const l of lines){const m=/^\s*\|(-+)(.*?)\s*$/.exec(l);if(!m)continue;const d=m[1].length,name=m[2];
+     if(d===3&&/^\d{9}$/.test(name)){cur=name;if(!ids.has(cur))ids.set(cur,{files:0,mp4:0})}
+     else if(d<=3)cur=null;
+     else if(cur&&/\.[a-z0-9]{2,5}$/i.test(name)){const x=ids.get(cur);x.files++;if(/\.mp4$/i.test(name))x.mp4++}}
+    info.List_Type='Folder-tree snapshot: course IDs and the files under each';
+   }else if(lines.some(l=>/\bcp\s+\//.test(l)))info.List_Type='Shell copy commands for index.html files (not a course list)';
+   else{for(const m of t.matchAll(/\b(\d{9})\b/g))ids.set(m[1],{files:'',mp4:''});info.List_Type=ids.size?'Text list of course IDs':'Not a course list'}
+  }
+  const now=new Map();for(const r of nowIn.get(s)||[]){const x=now.get(r.Course_ID)||{videos:0,total:0};x.videos+=r.Videos;x.total+=r.Total_Files;now.set(r.Course_ID,x)}
+  const overlap=(sem)=>{const z=new Set((nowIn.get(sem)||[]).map(r=>r.Course_ID));return [...ids.keys()].filter(id=>z.has(id)).length};
+  const bestSem=ids.size?[...nowIn.keys()].map(x=>[x,overlap(x)]).sort((a,b)=>b[1]-a[1])[0]:null;
+  const twin=prevLists.find(p=>p.SHA256===info.SHA256);
+  Object.assign(info,{Course_IDs_In_List:ids.size,IDs_Also_In_This_Folder_Now:ids.size?overlap(s):'',IDs_Only_In_List:ids.size?ids.size-overlap(s):'',
+   IDs_Only_In_Folder_Now:ids.size?[...now.keys()].filter(id=>!ids.has(id)).length:'',
+   Best_Matching_Folder:bestSem?bestSem[0]+' ('+bestSem[1]+' of '+ids.size+' IDs)':'',
+   Note:(twin?'Identical copy of '+twin.List_File+'. ':'')+(ids.size&&bestSem&&bestSem[0]!==s?'This list matches '+bestSem[0]+' better than the folder it sits in. ':'')+(ids.size?'':'Not compared: it lists no course IDs.')});
+  prevLists.push(info);
+  if(!ids.size)continue;
+  for(const id of [...new Set([...ids.keys(),...now.keys()])].sort()){
+   const p=ids.get(id),n=now.get(id),m=byId.get(id);
+   const cmp=!p?'ONLY_ON_E_NOW':!n?'ONLY_IN_PREVIOUS_LIST':p.files===''?'IN_BOTH':
+    p.mp4!==''?(p.mp4===n.videos&&p.files===n.total?'IN_BOTH_SAME_COUNTS':'IN_BOTH_COUNTS_DIFFER'):
+    p.files===n.videos?'IN_BOTH_COUNT_EQUALS_VIDEOS':p.files===n.total?'IN_BOTH_COUNT_EQUALS_ALL_FILES':'IN_BOTH_COUNTS_DIFFER';
+   prevRows.push({List_File:info.List_File,Academic_Folder:s,Course_ID:id,In_Previous_List:yes(p),On_E_Now_In_This_Folder:yes(n),Comparison:cmp,
+    Previous_Count:p?p.files:'',Previous_MP4_Files:p?p.mp4:'',Current_Videos:n?n.videos:'',Current_All_Files:n?n.total:'',
+    Best_Available_Title:m?best(m)[0]:'',In_NPTEL_PDF:m?.In_NPTEL_PDF||'NO',On_NPTEL_Website:m?.On_NPTEL_Website||'NO'});
+  }
+ }
+}
+const prevWithIds=prevLists.filter(p=>p.Course_IDs_In_List);
+
 // By academic folder.
 const sems=uniq(r01.rows.map(r=>r.Academic_Folder));
 const bySem=sems.map(s=>{const os=eRows.filter(r=>r.Academic_Folder===s),d=(f)=>new Set(os.filter(f).map(r=>r.Course_ID)).size;
@@ -145,7 +197,7 @@ S.push([]);S.push(header(['Measure','Count','How it is counted','Notes']));
 sec('1. The three resources');
 line('E: drive: course-ID folders (folder occurrences)',{f:`COUNTA(${ecol('Course_ID')})`,v:eRows.length},'Rows in E_Drive_Folders','One course ID can have several folders (several semesters, or duplicates in Web_courses)');
 line('E: drive: distinct course IDs',countIf({On_E_Drive:'YES'}),'Master_Comparison: On_E_Drive = YES','');
-line('E: drive: distinct IDs listed in the local index.html catalogues (previous list)',countIf({In_Local_HTML_Catalogue:'YES'}),'Master_Comparison: In_Local_HTML_Catalogue = YES','Catalogues exist only inside 3-digit discipline folders of the semester folders; Web_courses and Jan_Apr_2024 have none');
+line('E: drive: distinct IDs listed in the local index.html catalogues stored with the course folders',countIf({In_Local_HTML_Catalogue:'YES'}),'Master_Comparison: In_Local_HTML_Catalogue = YES','Catalogues exist only inside 3-digit discipline folders of the semester folders; Web_courses and Jan_Apr_2024 have none');
 line('NPTEL Courses PDF: distinct Subject IDs',countIf({In_NPTEL_PDF:'YES'}),'Master_Comparison: In_NPTEL_PDF = YES',pdfRows.length+' numbered rows; no duplicate IDs');
 line('nptel.ac.in: distinct course IDs found',countIf({On_NPTEL_Website:'YES'}),'Master_Comparison: On_NPTEL_Website = YES',catalogue.count+' in the public catalogue (fetched '+catalogue.fetched_at.slice(0,10)+'), plus course pages found by ID');
 line('All distinct course IDs across the three resources',{f:`COUNTA(${MS}!$A:$A)-1`,v:master.length},'Rows in Master_Comparison','');
@@ -167,7 +219,12 @@ line('Lecture titles linked by official file name (HIGH)',{f:`COUNTIF(Lecture_Ti
 line('Lecture titles linked by module + lecture number (MEDIUM)',{f:`COUNTIF(Lecture_Titles!$K:$K,"MEDIUM")`,v:r06.rows.filter(r=>r.Confidence==='MEDIUM').length},'Lecture_Titles: Confidence = MEDIUM','Used only when nptel.ac.in publishes no file names; never by list position');
 sec('7. Conflicts for review (sheet Conflicts_For_Review)');
 for(const [k,n] of tally(conflicts,r=>(r.Presence_Category.startsWith('PDF')?'No folder on E: · ':'On E: · ')+r.Conflict_Type))line(k,n,'Conflicts_For_Review: Presence_Category and Conflict_Type','');
-sec('8. Exceptions (sheet Exceptions)');
+sec('8. Previous lists kept on E: (sheets Previous_Lists, Previous_List_Compare)');
+line('Files found directly inside the academic folders (.csv, .xlsx, .txt)',{f:'COUNTA(Previous_Lists!$A:$A)-1',v:prevLists.length},'Rows in Previous_Lists','Read only; each list is compared with the course folders in the same academic folder today');
+for(const pl of prevWithIds)for(const k of ['IN_BOTH','ONLY_IN_PREVIOUS_LIST','ONLY_ON_E_NOW'])line(pl.List_File+': '+k.toLowerCase().replace(/_/g,' '),
+ {f:`COUNTIFS(Previous_List_Compare!$A:$A,"${pl.List_File}",Previous_List_Compare!$F:$F,"${k}*")`,v:prevRows.filter(r=>r.List_File===pl.List_File&&r.Comparison.startsWith(k)).length},
+ 'Previous_List_Compare: List_File and Comparison starting '+k,k==='IN_BOTH'?pl.List_Type:'');
+sec('9. Exceptions (sheet Exceptions)');
 for(const [k,n] of tally(r04.rows,'Exception_Type'))line(k,{f:`COUNTIF(Exceptions!$A:$A,"${k}")`,v:n},'Exceptions: Exception_Type = '+k,'');
 
 // Checks: identities that must hold if the workbook is consistent.
@@ -184,7 +241,7 @@ check('Lecture title rows = HIGH + MEDIUM',{f:'COUNTA(Lecture_Titles!$A:$A)-1',v
 check('PDF titles in Master match the PDF list',{f:`COUNTIF(${mcol('In_NPTEL_PDF')},"YES")`,v:master.filter(r=>r.In_NPTEL_PDF==='YES').length},pdfRows.length,'No duplicate Subject IDs in the PDF');
 
 const README=[[{v:'How to read this workbook',s:STYLE.title}],[],
- [{v:'Purpose',s:STYLE.bold},'Compare every NPTEL course ID across three resources: (1) the college archive on the E: drive, including the local index.html course catalogues stored with it (the previous list); (2) the NPTEL Courses PDF supplied by the college; (3) the official NPTEL platform, nptel.ac.in.'],
+ [{v:'Purpose',s:STYLE.bold},'Compare every NPTEL course ID across three resources: (1) the college archive on the E: drive, including the local index.html course catalogues stored with the course folders; (2) the NPTEL Courses PDF supplied by the college; (3) the official NPTEL platform, nptel.ac.in. Older lists kept on E: (folder-tree snapshots and subjectId/COUNT(*) exports) are compared with today\'s folders as well.'],
  [{v:'Read-only',s:STYLE.bold},'Nothing on E: was changed. The archive was listed to course-ID folder level, catalogue pages were read, the database was queried in a READ ONLY transaction, and nptel.ac.in public pages were read at about one request per second.'],
  [{v:'Sources',s:STYLE.bold},'E: drive: live folder listing (8 academic folders, 4 levels deep). Local catalogues: index.html inside each 3-digit discipline folder. PDF: "NPTEL Courses.pdf", text extracted with pypdf, '+pdfRows.length+' rows. Website: https://nptel.ac.in/courses (catalogue of '+catalogue.count+' courses, fetched '+catalogue.fetched_at.slice(0,10)+'), /courses/<id> course pages and /api/downloads/<id> lecture lists for every ID on E:.'],
  [],[{v:'Sheets',s:STYLE.bold}],
@@ -194,6 +251,8 @@ const README=[[{v:'How to read this workbook',s:STYLE.title}],[],
  ['Conflicts_For_Review','IDs where the sources still disagree after formatting differences are set aside, with each value side by side and a suggested next step.'],
  [MX,'IDs missing from one resource or extra in another, duplicate folders and folders not in their local catalogue.'],
  ['By_Academic_Folder','Per semester folder: folders, distinct IDs, how many are in the local catalogue, PDF and website, local content.'],
+ ['Previous_Lists','Every .csv/.xlsx/.txt file found directly inside an academic folder on E:, what kind of list it is, and how its course IDs compare with that folder today.'],
+ ['Previous_List_Compare','One row per course ID per previous list: in the old list, on E: now, and the old file count next to today\'s video and file counts. COUNT(*) in the database exports is not defined in the file, so it is shown next to both.'],
  [ERows,'Every course-ID folder on E: with its local catalogue status and file counts.'],
  ['PDF_vs_E_Occurrences','Report 03: each folder occurrence compared with its local catalogue row and the PDF.'],
  ['Exceptions','Report 04: every exception with its evidence.'],
@@ -223,6 +282,8 @@ const sheets=[
  table('Conflicts_For_Review',Object.keys(conflicts[0]||{Course_ID:''}),conflicts,{widths:[12,30,22,22,40,40,40,30,30,30,25,25,25,40,60,60,9,40]}),
  table(MX,['Category','Course_ID','Best_Available_Title','Title_Source','Website_State','E_Academic_Folders','Detail'],missing,{widths:[36,12,60,16,30,24,70]}),
  table('By_Academic_Folder',Object.keys(bySem[0]),bySem),
+ table('Previous_Lists',['List_File','Academic_Folder','Last_Modified','Size_Bytes','List_Type','Course_IDs_In_List','IDs_Also_In_This_Folder_Now','IDs_Only_In_List','IDs_Only_In_Folder_Now','Best_Matching_Folder','Note','SHA256'],prevLists,{widths:[40,16,12,10,50,10,12,10,12,30,60,20]}),
+ table('Previous_List_Compare',['List_File','Academic_Folder','Course_ID','In_Previous_List','On_E_Now_In_This_Folder','Comparison','Previous_Count','Previous_MP4_Files','Current_Videos','Current_All_Files','Best_Available_Title','In_NPTEL_PDF','On_NPTEL_Website'],prevRows,{widths:[40,16,12,10,10,32,10,10,10,10,60,10,10]}),
  table(ERows,Object.keys(eRows[0]),eRows,{style:(c,v)=>c==='Verification_Status'?statusStyle(v):0}),
  fromCsv('PDF_vs_E_Occurrences',r03),fromCsv('Exceptions',r04,[34,16,16,12,80,60]),fromCsv('Lecture_Titles',r06,[12,14,10,8,8,60,10,18,60,60,10])];
 fs.writeFileSync(out,workbook(sheets));

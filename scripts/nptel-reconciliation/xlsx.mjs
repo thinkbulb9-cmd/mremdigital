@@ -72,6 +72,34 @@ function zip(files){
  return Buffer.concat([...out,cd,e]);
 }
 
+/** Read a .xlsx (zip) without dependencies: returns [{name, rows: string[][]}] for every worksheet, cell text only. */
+export function readXlsx(buf){
+ const files=new Map();let e=buf.length-22;while(e>=0&&buf.readUInt32LE(e)!==0x06054b50)e--;
+ if(e<0)throw Error('not a zip file');
+ for(let p=buf.readUInt32LE(e+16),n=buf.readUInt16LE(e+10);n--;){
+  const method=buf.readUInt16LE(p+10),size=buf.readUInt32LE(p+20),nl=buf.readUInt16LE(p+28),xl=buf.readUInt16LE(p+30),cl=buf.readUInt16LE(p+32),off=buf.readUInt32LE(p+42);
+  const name=buf.toString('utf8',p+46,p+46+nl),start=off+30+buf.readUInt16LE(off+26)+buf.readUInt16LE(off+28),data=buf.subarray(start,start+size);
+  files.set(name,(method===8?zlib.inflateRawSync(data):data).toString('utf8'));p+=46+nl+xl+cl;
+ }
+ const unx=(s)=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+ const text=(x)=>unx([...x.matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map(m=>m[1]).join(''));
+ const shared=[...(files.get('xl/sharedStrings.xml')||'').matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m=>text(m[1]));
+ const rels=new Map([...(files.get('xl/_rels/workbook.xml.rels')||'').matchAll(/<Relationship [^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g)].map(m=>[m[1],m[2].replace(/^\/?(xl\/)?/,'xl/')]));
+ return [...(files.get('xl/workbook.xml')||'').matchAll(/<sheet [^>]*name="([^"]+)"[^>]*r:id="([^"]+)"/g)].map(([,name,rid])=>{
+  const xml=files.get(rels.get(rid))||'',rows=[];
+  for(const [,r] of xml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)){
+   const row=[];
+   for(const [,ref,attrs,body] of r.matchAll(/<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+    let col=0;for(const ch of ref)col=col*26+ch.charCodeAt(0)-64;
+    const v=(/<v>([^<]*)<\/v>/.exec(body||'')||[])[1];
+    row[col-1]=/t="s"/.test(attrs)?shared[Number(v)]??'':/t="inlineStr"/.test(attrs)?text(body||''):unx(v??'');
+   }
+   rows.push(Array.from(row,(x)=>x??''));
+  }
+  return {name:unx(name),rows};
+ });
+}
+
 export function workbook(sheets){
  const names=sheets.map(s=>s.name);
  if(names.some(n=>n.length>31||/[\\/?*[\]:]/.test(n))||new Set(names).size!==names.length)throw Error('bad sheet names: '+names.join(', '));
