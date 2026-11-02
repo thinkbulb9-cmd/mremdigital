@@ -1,41 +1,44 @@
-# MREM UI/UX Comparison — Concept A
+# MREM Open LMS — Brand Design v2 (Comparison Branch)
 
-This isolated branch is for visual and interaction comparison only. **Do not merge it into the campus server until the user chooses a design.**
+This branch is a **design implementation**, not a migration of the college storage archive.
 
-## Live preview
+## No-login demonstration
 
-Open the branch's Vercel preview at `/design-preview`. It uses illustrative catalogue entries and self-contained sample learning resources. Real E:, F:, G:, H: storage is **not** connected to the Vercel preview.
+The home page `/` and `/design-preview` open the same MREM-branded LMS UI without a student account. The deployment can be used to compare design work with Claude Code's locally running Windows Server version.
 
-## Design concepts
+This version is intentionally populated with a small set of course-level titles and faculty attributed to the supplied NPTEL catalogue, plus plainly marked **synthetic example resources**. The sample video and PDF are original tiny fixtures and are *not* copies of NPTEL content.
 
-- Compact professional MREM digital library navigation; branded placeholder icon awaits exact college-approved logo.
-- Department directory, course catalogue, course selection and contextual lesson sidebar.
-- Inline video, PDF, HTML and text viewer layouts with navigation maintained alongside content.
-- Search/filter functionality based on the sample catalogue.
-- Dedicated uncategorized-resources state (no invented filenames).
-- Responsive desktop/tablet/mobile layouts including a mobile lesson drawer.
-- Typography scaled for an everyday SaaS learning app.
+### Working UI interactions
 
-## Explicit scope
+- MREM official college logo linked to the official university-hosted image; offline college deployment must vendor an authorized local logo copy.
+- Auto-rotating MREM-only announcement slides with clickable arrows and dots.
+- Global navigation, department shortcuts and department cards.
+- Searchable/filterable course catalogue (sample data).
+- Persistent desktop lesson navigation and a mobile lesson drawer.
+- Inline video playback via tiny synthetic test video `/demo/mrem-preview.mp4`.
+- Inline PDF preview via generated synthetic PDF at `/design-preview/sample-pdf`.
+- Inline rendered HTML table sample inside script-disabled sandbox.
+- Text content viewing, previous/next resource controls, temporary bookmark state.
+- An empty state for Uncategorized Resources: never invent source directories.
+- Responsive typography, hover/focus styles, reduced-motion support.
 
-Only three files were created for this design preview:
+### Banner image assets
 
-- `app/design-preview/page.tsx`
-- `components/LibraryDesignPreview.tsx`
-- `components/library-design-preview.css`
+- `/lms-art/academic.svg`
+- `/lms-art/library.svg`
+- `/lms-art/innovation.svg`
 
-No live student route, database migration, existing file APIs, storage scanner, security policy or student publication setting is changed.
+The artwork is original SVG stored in the repository and works offline.
 
-## Sample data warning
+## Security and no-login scope
 
-Some course-level examples match titles in the supplied NPTEL catalogue, but all displayed course counts, lesson titles and preview resources are illustrative. They are not verified contents of the college server. Real lecture titles must be selected from approved mappings before production integration.
+**No login** means the design preview can be browsed anonymously. It does **not** authorize internet publishing of actual E:, F:, G: and H: archives. Do not connect original educational media to the public demo or bypass campus publication approval.
 
-## How to compare
+The branch does not alter resource storage, file APIs, PostgreSQL, Windows Server configuration, original drive files, or Claude Code's local `legacy-html-catalogue` branch.
 
-1. Open `/design-preview` on the Vercel branch preview URL.
-2. Evaluate department navigation, course list, course workspace, in-place video/document viewing, mobile layout and typography.
-3. Compare directly against Claude Code's local Windows Server version.
-4. Choose which design or components to adopt.
-5. Only then port approved UI elements to the main campus application and connect existing server APIs.
+## Comparing with Claude's version
 
-The separate branch avoids conflicts with Claude Code's unpushed `legacy-html-catalogue` work.
+1. Visit the no-login preview.
+2. Compare overview, banner carousel, departments, catalogue and course workspace at mobile and desktop widths.
+3. Choose preferred parts.
+4. Apply selected UI components to the college server branch only after metadata, security, and media endpoints are verified.
