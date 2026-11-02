@@ -7,12 +7,40 @@ processed with the same commands as E:, F:, G: and H:; no drive-specific scanner
 
 - Students open the library address directly. There is no student login: `/` opens the LMS dashboard, `/login`
   redirects to it. Staff/HOD tools stay behind their own login at `/staff`.
-- Campus mode (`MREM_CAMPUS_PUBLIC=enabled` in `.env.local`) serves the real catalogue. Without it the root shows the
-  approved design preview with sample data.
-- **Before opening the library to the campus network**, set `MREM_CAMPUS_REQUIRE_APPROVAL=enabled` and approve content:
-  `campus_publications` (one row per course ID) and `campus_folder_publications` (a folder and everything below it, for
-  files without a course ID). With approval on, nothing unapproved is listed or streamed. The app currently listens on
-  127.0.0.1 only.
+- Campus mode (`MREM_CAMPUS_PUBLIC=enabled` in `.env.local`) serves the real catalogue. Without it the student pages show
+  only a "not available" notice and file streaming is off.
+- `npm start` listens on this server only (127.0.0.1). Nothing else on the network can reach it.
+
+## Opening the library to the campus network
+
+Publication is a college decision and opening the firewall changes the server's security settings, so each step below is
+run by an authorised person on the server. Nothing here touches the archive drives.
+
+1. **Turn approval on.** Add `MREM_CAMPUS_REQUIRE_APPROVAL=enabled` to `C:\MREM\mremdigital\.env.local`. From then on
+   only approved courses (`campus_publications`) and approved folders (`campus_folder_publications`, for files without a
+   course ID) are listed or streamed.
+2. **Approve courses.** Preview first (writes `C:\MREM\inventory\unified\publish-preview.csv`, changes nothing):
+   ```
+   npm run campus:publish:bulk -- --verified-only
+   npm run campus:publish:bulk -- --department "Computer Science and Engineering" --verified-only
+   npm run campus:publish:bulk -- --codes C:\MREM\approved-course-ids.txt
+   ```
+   Then apply the same rule with `--reviewer "Name, role" --confirm`. Each row records the reviewer, time and rule.
+   Undo with `--revoke`. One course at a time: `npm run campus:publish -- --code 106101001 --reviewer "..." --confirm`.
+3. **Open the firewall for the campus subnet only** (Administrator PowerShell):
+   ```
+   powershell -ExecutionPolicy Bypass -File C:\MREM\mremdigital\scripts\open-campus-network.ps1 -Subnet 172.16.0.0/16
+   ```
+   It refuses while approval is off or nothing is approved, allows TCP 3000 from that subnet on Domain/Private networks
+   only, and warns if the network is marked Public. PostgreSQL (5432) stays closed. Close again with `-Remove`.
+4. **Start for the network:** `npm run build` then `npm run start:campus`. It also refuses to start while approval is
+   off or nothing is approved. If Windows asks whether Node.js may communicate, choose **Cancel**: the rule from step 3
+   is the only one needed, and the pop-up would open the port to every address.
+5. **Test from another campus computer:** `http://172.16.0.160:3000/` (home, a department, a video, a web course, a PDF;
+   an unapproved course ID must show "not found").
+
+Staff sign-in over plain HTTP is unencrypted. Before staff use `/staff` from other computers, put HTTPS in front
+(IIS with URL Rewrite/ARR, or Caddy) and keep the app itself on 127.0.0.1.
 
 ## Add a storage source (any drive letter, mount or share)
 

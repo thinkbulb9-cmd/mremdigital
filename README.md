@@ -63,7 +63,7 @@ Details, approvals, reports and rollback: [CAMPUS_LMS_FOUR_DRIVES.md](CAMPUS_LMS
 |---|---|
 | `DATABASE_URL` | PostgreSQL `mrem_library` |
 | `MREM_CAMPUS_PUBLIC=enabled` | Serve the catalogue (college server only) |
-| `MREM_CAMPUS_REQUIRE_APPROVAL=enabled` | Show only college-approved courses/folders. **Required before campus-network access.** |
+| `MREM_CAMPUS_REQUIRE_APPROVAL=enabled` | Show only college-approved courses/folders. **Required before campus-network access** (`npm run start:campus` refuses without it). |
 | `MREM_CATALOG_CACHE_SECONDS` | Catalogue cache (default 300) |
 | `SESSION_SECRET` | Staff sessions (32+ random characters) |
 
@@ -73,8 +73,12 @@ Details, approvals, reports and rollback: [CAMPUS_LMS_FOUR_DRIVES.md](CAMPUS_LMS
 npm install
 npm run db:init                       # creates/updates tables (back up first with pg_dump -Fc)
 npm run typecheck && npm run test:nptel && npm run test:legacy && npm run test:stream
-npm run build && npm start            # next start -H 127.0.0.1 -p 3000
+npm run build && npm start            # this server only (127.0.0.1:3000)
+npm run start:campus                  # campus network: needs approval on and approved courses
 ```
+
+Approving courses (`npm run campus:publish:bulk`) and opening the campus network (`scripts/open-campus-network.ps1`):
+see [CAMPUS_LMS_FOUR_DRIVES.md](CAMPUS_LMS_FOUR_DRIVES.md#opening-the-library-to-the-campus-network).
 
 ## Code map
 
@@ -91,3 +95,4 @@ npm run build && npm start            # next start -H 127.0.0.1 -p 3000
 - Courses that no local catalogue, PDF or nptel.ac.in names are shown by course ID.
 - Lecture titles exist only where evidence ties them to the exact file; many lectures show their original file names.
 - College publication approval must be switched on and courses approved before the library is opened to the campus network.
+- Plain HTTP: put an HTTPS reverse proxy in front before staff sign in from other computers.
