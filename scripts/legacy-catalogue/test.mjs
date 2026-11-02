@@ -53,7 +53,8 @@ test('finds the catalogue table by header names and extracts every field',()=>{
  assert.equal(p.courses.length,2);
  assert.equal(p.skippedRows,1);
  const [a,b]=p.courses;
- assert.deepEqual({...a,links:undefined},{course_code:'101104086',title:'Computational Science in Engineering',discipline:'Aerospace Engineering',
+ assert.deepEqual({...a,links:undefined},{course_code:'101104086',title:'Computational Science in Engineering',
+  raw_title:'Computational Science in Engineering',discipline:'Aerospace Engineering',
   coordinators:'Prof. Ashoke De',course_type:'Video',institution:'IIT Kanpur',links:undefined});
  assert.equal(a.links.filter(l=>l.via==='option').length,2,'empty placeholder option is dropped');
  assert.equal(a.links[0].viewer,'displayvideo.html');
@@ -72,6 +73,7 @@ test('observed 101 markup: every row keeps its own form viewer; placeholder and 
  // Jul-Dec-2021/102 writes some titles as "NOC:Environmental Biotechnology".
  const noc=parseCatalogueHtml(OBSERVED_PAGE.replace('Lighter than Air Systems','NOC:Lighter than Air Systems'));
  assert.equal(noc.courses[0].title,'Lighter than Air Systems');
+ assert.equal(noc.courses[0].raw_title,'NOC:Lighter than Air Systems','original wording is kept for reconciliation');
 });
 test('observed displayvideo.html embeds type1 as-is, so no folder prefix is inferred',()=>{
  const viewer=`<script LANGUAGE="JavaScript">

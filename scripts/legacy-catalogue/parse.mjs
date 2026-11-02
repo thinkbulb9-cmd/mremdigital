@@ -114,7 +114,8 @@ export function parseCatalogueHtml(html){
    const code=/(?:^|\D)(\d{9})(?!\d)/.exec(text($(cell('code')).text()))?.[1];
    const title=courseTitle($(cell('title')).text());
    if(!code||!title){if(clean($(tr).text()))skippedRows++;continue}
-   courses.push({course_code:code,title,discipline:text($(cell('discipline')).text()),
+   // raw_title keeps the catalogue wording (e.g. a "NOC:" prefix) for source-by-source reconciliation.
+   courses.push({course_code:code,title,raw_title:text($(cell('title')).text()),discipline:text($(cell('discipline')).text()),
     coordinators:text($(cell('coordinators')).text()),course_type:text($(cell('type')).text()),
     institution:text($(cell('institution')).text()),links:cell('content')?linksIn($,cell('content')):linksIn($,tr)});
   }

@@ -26,7 +26,10 @@
     "campus:repeats": "node --env-file=.env.local scripts/export-possible-repeats.mjs",
     "campus:html:extract": "node --env-file=.env.local scripts/extract-legacy-html-for-github.mjs",
     "campus:legacy": "node --env-file=.env.local scripts/legacy-catalogue/run.mjs",
-    "test:legacy": "node --test scripts/legacy-catalogue/test.mjs"
+    "test:legacy": "node --test scripts/legacy-catalogue/test.mjs",
+    "test:nptel": "node --test scripts/nptel-reconciliation/test.mjs",
+    "nptel:fetch": "node --env-file=.env.local scripts/nptel-reconciliation/fetch-official.mjs",
+    "nptel:reconcile": "node --env-file=.env.local scripts/nptel-reconciliation/reconcile.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
