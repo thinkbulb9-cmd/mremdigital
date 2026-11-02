@@ -1,6 +1,7 @@
 import 'server-only';
 import {db} from '@/lib/db';
 import {approvalRequired} from '@/lib/campus-publication';
+import {campusMode} from '@/lib/campus-mode';
 
 /** LIKE pattern for "inside folder <col>", with LIKE wildcards in folder names escaped (folders often contain "_"). */
 const insideFolder=(col:string)=>`replace(replace(replace(${col},'\\','\\\\'),'%','\\%'),'_','\\_')||'/%'`;
@@ -36,6 +37,7 @@ export const slugify=(s:string)=>clean(s).toLowerCase().replace(/&/g,' and ').re
 /** Every course ID with visible files in a course folder, on any drive, joined to its catalogue metadata. A course on several
  * drives is one row. A missing or placeholder title stays empty: pages then show the original course ID. */
 export function courseSummaries(){
+ if(!campusMode())return Promise.resolve([] as CourseSummary[]);
  return cached('courses',async()=>{
   const stats=await db().query(`SELECT r.course_code AS code,count(*)::int AS files,count(*) FILTER(WHERE r.kind='Video')::int AS videos,
    count(*) FILTER(WHERE lower(r.ext)='.pdf')::int AS pdfs,count(*) FILTER(WHERE lower(r.ext)=ANY($1))::int AS texts,
@@ -85,7 +87,7 @@ export const offeringLabel=(s:string|null)=>{
 
 /** Course IDs whose verified lecture titles or original file names match a search (trigram indexes, bounded). */
 export async function codesMatching(q:string):Promise<Set<string>>{
- if(q.length<3)return new Set();
+ if(!campusMode()||q.length<3)return new Set();
  const like='%'+q.replace(/[\\%_]/g,'\\$&')+'%';
  const r=await db().query(`SELECT DISTINCT course_code FROM (
    (SELECT lt.course_code FROM lecture_titles lt WHERE lt.confidence='HIGH' AND lt.title ILIKE $1 LIMIT 300)
@@ -97,6 +99,7 @@ export async function codesMatching(q:string):Promise<Set<string>>{
 
 /** Filter and page the catalogue. */
 export async function findCourses({q='',dept='',kind='',page=1,limit=24}:{q?:string;dept?:string;kind?:''|'video'|'web';page?:number;limit?:number}){
+ if(!campusMode())return {items:[] as CourseSummary[],total:0,page:Math.max(1,page),pages:1};
  const query=clean(q).toLowerCase();
  const deep=query?await codesMatching(query):new Set<string>();
  const all=(await courseSummaries()).filter(c=>(!dept||c.deptSlug===dept)&&(kind!=='video'||c.videos>0)&&(kind!=='web'||c.isWeb)&&
@@ -123,7 +126,7 @@ const ORDER='ORDER BY r.module_no NULLS LAST,r.lecture_no NULLS LAST,r.name,r.id
 
 /** One course: its offerings (semesters, on whichever drive) with counts per group. Physical drives are not returned. */
 export async function course(code:string){
- if(!/^\d{9}$/.test(code))return null;
+ if(!campusMode()||!/^\d{9}$/.test(code))return null;
  const summary=(await courseSummaries()).find(c=>c.code===code);
  if(!summary)return null;
  const rows=(await db().query(`SELECT COALESCE(r.semester_name,'') AS value,${Object.entries(GROUPS).map(([g,w])=>`count(*) FILTER(WHERE ${w})::int AS ${g}`).join(',')}
@@ -134,6 +137,7 @@ export async function course(code:string){
 }
 
 export async function resources(code:string,offering:string,group:Group,page=1,limit=60){
+ if(!campusMode())return [] as Resource[];
  const r=await db().query(`${RESOURCE_SQL} WHERE r.course_code=$1 AND COALESCE(r.semester_name,'')=$2 AND ${GROUPS[group]} AND ${visibleSql()} ${ORDER} LIMIT $3 OFFSET $4`,
   [code,offering,limit,(Math.max(1,page)-1)*limit]);
  return r.rows as Resource[];
@@ -141,7 +145,7 @@ export async function resources(code:string,offering:string,group:Group,page=1,l
 
 /** One learning resource with its neighbours in the same course, offering and group (for Previous / Next). */
 export async function lesson(code:string,id:string){
- if(!/^\d{9}$/.test(code)||!/^\d{1,18}$/.test(id))return null;
+ if(!campusMode()||!/^\d{9}$/.test(code)||!/^\d{1,18}$/.test(id))return null;
  const r=(await db().query(`${RESOURCE_SQL} WHERE r.id=$1 AND r.course_code=$2 AND ${visibleSql()}`,[id,code])).rows[0] as Resource|undefined;
  if(!r)return null;
  const group=(Object.keys(GROUPS) as Group[]).find(g=>g==='video'?r.kind==='Video':g==='pdf'?r.ext.toLowerCase()==='.pdf':g==='html'?r.kind==='HTML':
@@ -154,6 +158,7 @@ export async function lesson(code:string,id:string){
 
 /** The page a Web Course opens on: its index page closest to the course folder, else its shallowest HTML page. */
 export async function webEntry(code:string,offering:string){
+ if(!campusMode())return undefined;
  const r=await db().query(`SELECT r.id::text FROM resources r WHERE r.course_code=$1 AND COALESCE(r.semester_name,'')=$2 AND r.kind='HTML' AND ${visibleSql()}
    ORDER BY (lower(r.name) IN ('index.html','index.htm'))::int DESC,length(r.rel_path)-length(replace(r.rel_path,'/','')),r.rel_path LIMIT 1`,[code,offering]);
  return r.rows[0]?.id as string|undefined;
@@ -161,6 +166,7 @@ export async function webEntry(code:string,offering:string){
 
 /** Study materials: PDFs and text/documents inside course folders, newest offering first. */
 export async function studyMaterials({q='',type='',page=1,limit=30}:{q?:string;type?:''|'pdf'|'document';page?:number;limit?:number}){
+ if(!campusMode())return {items:[],total:0,page:Math.max(1,page),pages:1};
  const where=[visibleSql(),'r.course_code IS NOT NULL',type==='pdf'?GROUPS.pdf:type==='document'?GROUPS.document:`(${GROUPS.pdf} OR ${GROUPS.document})`];
  const args:unknown[]=[];
  if(clean(q).length>=2){args.push('%'+clean(q).replace(/[\\%_]/g,'\\$&')+'%');where.push(`r.name ILIKE $${args.length}`)}
