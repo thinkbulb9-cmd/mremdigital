@@ -132,9 +132,9 @@ try{
   if(x===y)return {ok:true,note:''};
   const within=(big,small)=>small.length>=6&&(' '+big+' ').includes(' '+small+' ');
   if(within(x,y)||within(y,x))return {ok:true,note:'one source lists more institutes ('+label+': '+a+' / '+b+')'};
-  const co=COORDINATING[id.slice(3,6)]||off?.coordinating;
-  if(co&&(x===instNorm(co)||y===instNorm(co)))
-   return {ok:true,note:co+' is the NPTEL coordinating institute for this ID; the other source names the host institute ('+label+': '+a+' / '+b+')'};
+  // From the ID digits, and as nptel.ac.in states it for the course (they can differ).
+  const co=[COORDINATING[id.slice(3,6)],off?.coordinating].filter(Boolean).find(c=>x===instNorm(c)||y===instNorm(c));
+  if(co)return {ok:true,note:co+' is the NPTEL coordinating institute for this ID; the other source names the host institute ('+label+': '+a+' / '+b+')'};
   return {ok:false,note:prefix+(label==='HTML / PDF'?'HTML '+a+' / PDF '+b:a+' / '+b)};
  };
  const disciplinesAgree=(a,b)=>{const x=norm(a),y=norm(b);if(!x||!y||x===y)return {ok:true,note:''};
