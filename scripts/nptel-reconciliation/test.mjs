@@ -11,9 +11,22 @@ test('title statuses separate NOC prefixes, formatting and real differences',()=
  assert.equal(titleStatus('NOC:Basics of Biology','NOC:Basics of Biology').status,'EXACT_MATCH');
  assert.equal(titleStatus('Material & Energy Balance','NOC:material and energy balance').status,'NORMALIZED_MATCH');
  const cut=titleStatus('Evolutionary Computation for Single and Multi-Objective Optimiza','NOC:Evolutionary Computation for Single and Multi-Objective Optimization');
- assert.equal(cut.status,'TITLE_CONFLICT');assert.match(cut.note,/truncation/);
+ assert.equal(cut.status,'TRUNCATED_MATCH','the local catalogue cuts titles at 64 characters');
+ assert.equal(titleStatus('NOC:Introduction to Research','NOC:Introduction to Research (Research Methodology)').status,'TITLE_CONFLICT','a short prefix is not a cut-off');
  assert.equal(titleStatus('','x').status,'HTML_TITLE_MISSING');
  assert.equal(titleStatus('x','').status,'PDF_TITLE_MISSING');
+});
+test('attached extraction text, accents, subtitles and Hindi/Tamil titles',()=>{
+ for(const [a,b] of [['NOC:MATLAB Programming for Numerical Computation(Course sponsored by Aricent)','NOC:MATLAB Programming for Numerical Computation'],
+  ['NOC:Parameterized AlgorithmsIIT GandhinagarIMSC','NOC:Parameterized Algorithms'],['NOC:Wheeled Mobile RobotsIITM','NOC:Wheeled Mobile Robots'],
+  ['Strength Of Materials - IITM','NOC:Strength Of Materials'],['Introduction to Paninian grammar','NOC:Introduction to Pāṇinian grammar'],
+  ['NOC:Welding science and technology(In Tamil)','NOC:Welding science and technology(In Tamil) வெல்டிங்']])
+  assert.equal(titleStatus(a,b).status,'NORMALIZED_MATCH',a);
+ assert.equal(titleStatus('Oral Biology','NOC:Saveetha Dental College And Hospitals: Oral Biology').status,'SUBTITLE_MATCH');
+ assert.equal(titleStatus('पोषण माता शिशु','NOC: Maternal Infant Young Child Nutrition (Hindi) पोषण माता शिशु').status,'NON_LATIN_NOT_COMPARED');
+ assert.equal(titleStatus('NOC:Introduction to P??inian grammar','NOC:Introduction to Pāṇinian grammar').status,'NON_LATIN_NOT_COMPARED');
+ for(const [a,b] of [['Transition Metal Chemistry','NOC:Advanced Transition Metal Chemistry'],['Investment Management','NOC:Invest Management'],
+  ['Narrative Mode and Fiction','NOC:Fiction: Epics, Novels and Poetry']])assert.equal(titleStatus(a,b).status,'TITLE_CONFLICT',a);
 });
 test('coordinators agree by surname; unrelated people differ',()=>{
  assert.equal(peopleStatus('Prof. P. K. Garg','Prof. Pradeep Kumar Garg').status,'MATCH');
@@ -21,6 +34,15 @@ test('coordinators agree by surname; unrelated people differ',()=>{
  assert.equal(peopleStatus('Prof. Anjali PalProf. Sudha Goel','Prof. Anjali Pal,Prof. Sudha Goel').status,'MATCH');
  assert.equal(peopleStatus('Prof. Ashok Joshi','Prof. Rajkumar Pant').status,'DIFFERS');
  assert.equal(instNorm('IIT (BHU) Varanasi'),instNorm('IIT(BHU) Varanasi'));
+});
+test('coordinator spelling variants, partial names and placeholders',()=>{
+ for(const [a,b] of [['Prof. Manoj Datta','Prof.  Manoj Dutta'],['Prof. Uttam Kumar Bannerjee','Prof. Uttam Kumar Banerjee'],['Prof. Sourav Chakraborty','Prof. SouravChakraborty'],
+  ['Prof. Jayanta Kumar Ghosh','Prof. J. K. Ghosh (Late)\nProf. Siddhartha Khare'],['Prof. Rajesh','Prof. Rajesh Kumar'],['Dr. Srinivas Talabatulla','Prof.  T.  Srinivas']])
+  assert.equal(peopleStatus(a,b).status,'MATCH',a+' / '+b);
+ assert.equal(peopleStatus('Multifaculty','Prof. Ramya and Team').status,'MISSING');
+ assert.match(peopleStatus('Multi-faculty','Prof. Brinda Srinivasagopalane & Team').note,/placeholder/);
+ assert.equal(peopleStatus('Prof. Rajesh Kumar','Prof. Sanjay Kumar').status,'DIFFERS','a common surname alone is not the same person');
+ assert.equal(peopleStatus('Prof. Shreesh Chaudhary','Prof.  Rajesh Kumar').status,'DIFFERS');
 });
 const official={downloads:{lessons:[{lesson_id:'1',title:'Lecture 1: Introduction',url:'https://media.dev.nptel.ac.in/content/mp4/101/101/101101086/MP4/mod01lec01.mp4'}]},
  outline:{units:[{id:1,name:'Week 1',lessons:[{id:1,name:'Lecture 1: Introduction'}]}]}};

@@ -9,7 +9,7 @@ import zlib from 'node:zlib';
 import {parseArgs} from 'node:util';
 import pg from 'pg';
 import {decodeHtmlBytes,parseCatalogueHtml} from '../legacy-catalogue/parse.mjs';
-import {titleStatus,titlesAgree,peopleStatus,instNorm,norm,stripNoc,nonLatin,matchLectures} from './compare.mjs';
+import {titleStatus,titlesAgree,peopleStatus,instNorm,norm,stripNoc,nonLatin,matchLectures,TRUNCATED_AT} from './compare.mjs';
 
 const {values:opt}=parseArgs({options:{source:{type:'string',default:'server1'},pdf:{type:'string'},
  web:{type:'string',default:'C:/MREM/inventory/nptel-reconciliation/web-cache'},out:{type:'string',default:'C:/MREM/inventory/nptel-reconciliation'},
@@ -124,12 +124,18 @@ try{
   v.web_state=v.found?'FOUND':!catalogue?'NOT_CHECKED':c&&!c.outline_http?'UNAVAILABLE':c?.outline?.state==='error'||c?.downloads?.lessons?.length===0?'NOT_FOUND':c?'NOT_FOUND':'NOT_FETCHED';
   official.set(id,v);return v;
  };
- const institutesAgree=(local,pdfInst,off)=>{
-  if(!local||!pdfInst)return {ok:true,note:''};
-  if(instNorm(local)===instNorm(pdfInst))return {ok:true,note:''};
-  if(off?.coordinating&&instNorm(local)===instNorm(off.coordinating)&&instNorm(pdfInst)===instNorm(off.institute))
-   return {ok:true,note:'local HTML names the NPTEL coordinating institute ('+local+'); PDF and nptel.ac.in name the host institute ('+pdfInst+')'};
-  return {ok:false,note:'institute differs: HTML '+local+' / PDF '+pdfInst};
+ // Digits 4-6 of a course ID name NPTEL's coordinating institute; a course may be hosted elsewhere.
+ const COORDINATING={'101':'IIT Bombay','102':'IIT Delhi','103':'IIT Guwahati','104':'IIT Kanpur','105':'IIT Kharagpur','106':'IIT Madras','107':'IIT Roorkee','108':'IISc Bangalore'};
+ const institutesAgree=(a,b,id,off,{label='HTML / PDF',prefix='institute differs: '}={})=>{
+  if(!a||!b)return {ok:true,note:''};
+  const x=instNorm(a),y=instNorm(b);
+  if(x===y)return {ok:true,note:''};
+  const within=(big,small)=>small.length>=6&&(' '+big+' ').includes(' '+small+' ');
+  if(within(x,y)||within(y,x))return {ok:true,note:'one source lists more institutes ('+label+': '+a+' / '+b+')'};
+  const co=COORDINATING[id.slice(3,6)]||off?.coordinating;
+  if(co&&(x===instNorm(co)||y===instNorm(co)))
+   return {ok:true,note:co+' is the NPTEL coordinating institute for this ID; the other source names the host institute ('+label+': '+a+' / '+b+')'};
+  return {ok:false,note:prefix+(label==='HTML / PDF'?'HTML '+a+' / PDF '+b:a+' / '+b)};
  };
  const disciplinesAgree=(a,b)=>{const x=norm(a),y=norm(b);if(!x||!y||x===y)return {ok:true,note:''};
   if(x.startsWith(y)||y.startsWith(x))return {ok:true,note:'discipline name is cut off in one source'};return {ok:false,note:'discipline differs: HTML '+a+' / PDF '+b}};
@@ -188,15 +194,17 @@ try{
 
  // Report 03: folder x HTML x PDF.
  const r03=[];
+ // A PDF title the parser flagged as non-Latin is garbled by extraction: it is not evidence of a different title.
+ const withPdfTitle=(t,p)=>p?.non_latin&&t.status==='TITLE_CONFLICT'?{status:'NON_LATIN_NOT_COMPARED',note:'PDF title is Hindi/Tamil text garbled by extraction; use the nptel.ac.in title'}:t;
  const reconcileRow=(o,folderExists,h,id)=>{
   const p=pdf.get(id),off=officialFor(id),remarks=[];
-  const t=titleStatus(h?.title,p?.title);if(t.note)remarks.push('title: '+t.note);
+  const t=withPdfTitle(titleStatus(h?.title,p?.title),p);if(t.note)remarks.push('title: '+t.note);
   if(p?.non_latin)remarks.push('PDF title is non-Latin; text extraction may be unreliable, check the PDF page');
   if(p&&p.split==='unsplit')remarks.push('PDF row: institute could not be separated from the title');
   let conflict=Boolean(h&&p&&t.status==='TITLE_CONFLICT');
   if(h&&p){
    const pp=peopleStatus(h.coordinators,p.coordinator);if(pp.status==='DIFFERS'){conflict=true;remarks.push('coordinators differ: HTML '+h.coordinators+' / PDF '+p.coordinator)}else if(pp.note)remarks.push(pp.note);
-   const ii=institutesAgree(h.institute,p.institute,off);if(!ii.ok)conflict=true;if(ii.note)remarks.push(ii.note);
+   const ii=institutesAgree(h.institute,p.institute,id,off);if(!ii.ok)conflict=true;if(ii.note)remarks.push(ii.note);
    const dd=disciplinesAgree(h.discipline,p.discipline);if(!dd.ok)conflict=true;if(dd.note)remarks.push(dd.note);
   }
   const overall=conflict?'CONFLICT_REVIEW_REQUIRED':folderExists&&h&&p?'MATCHED_IN_ALL_THREE':folderExists&&p?'FOLDER_AND_PDF_ONLY':folderExists&&h?'FOLDER_AND_HTML_ONLY':
@@ -247,21 +255,25 @@ try{
  const verify=(id)=>{
   const occs=occById.get(id)||[],p=pdf.get(id),off=officialFor(id),c=off.cache;
   const htmlTitles=[...new Set(occs.map(o=>o.html?.title).filter(Boolean))],h=occs.find(o=>o.html)?.html||null,remarks=[];
-  const tHP=titleStatus(h?.title,p?.title),tPO=titleStatus(p?.title,off.title,{aMissing:'PDF_TITLE_MISSING',bMissing:'OFFICIAL_TITLE_MISSING'}),
+  const tHP=withPdfTitle(titleStatus(h?.title,p?.title),p),tPO=withPdfTitle(titleStatus(p?.title,off.title,{aMissing:'PDF_TITLE_MISSING',bMissing:'OFFICIAL_TITLE_MISSING'}),p),
    tHO=titleStatus(h?.title,off.title,{bMissing:'OFFICIAL_TITLE_MISSING'});
   if(htmlTitles.length>1)remarks.push('local HTML titles differ between semesters: '+htmlTitles.join(' || '));
   const pairs=[h&&p&&tHP,p&&off.found&&tPO,h&&off.found&&tHO].filter(Boolean);
   let conflict=pairs.some(x=>x.status==='TITLE_CONFLICT');
-  for(const x of pairs)if(x.status==='TITLE_CONFLICT'&&x.note)remarks.push(x.note);
+  const nonLatinTitle=pairs.some(x=>x.status==='NON_LATIN_NOT_COMPARED');
+  for(const x of pairs)if(x.status!=='EXACT_MATCH'&&x.status!=='PREFIX_DIFFERENCE'&&x.note&&!remarks.includes(x.note))remarks.push(x.note);
   const profs=[[h?.coordinators,p?.coordinator,'HTML/PDF'],[p?.coordinator,off.professor,'PDF/official'],[h?.coordinators,off.professor,'HTML/official']];
-  for(const [a,b,lbl] of profs){if(!a||!b)continue;const s=peopleStatus(a,b);if(s.status==='DIFFERS'){conflict=true;remarks.push('coordinators differ ('+lbl+')')}}
-  if(p&&off.found&&p.institute&&off.institute&&instNorm(p.institute)!==instNorm(off.institute)){conflict=true;remarks.push('institute differs (PDF/official): '+p.institute+' / '+off.institute)}
-  if(h&&(p||off.found)){const ii=institutesAgree(h.institute,p?.institute||off.institute,off);if(!ii.ok){conflict=true}if(ii.note)remarks.push(ii.note)}
+  for(const [a,b,lbl] of profs){if(!a||!b)continue;const s=peopleStatus(a,b);
+   if(s.status==='DIFFERS'){conflict=true;remarks.push('coordinators differ ('+lbl+')')}
+   else if(/share|placeholder/.test(s.note))remarks.push('coordinators ('+lbl+'): '+s.note)}
+  if(p&&off.found){const ii=institutesAgree(p.institute,off.institute,id,off,{label:'PDF / official',prefix:'institute differs (PDF/official): '});if(!ii.ok)conflict=true;if(ii.note)remarks.push(ii.note)}
+  if(h&&(p||off.found)){const ii=institutesAgree(h.institute,p?.institute||off.institute,id,off);if(!ii.ok){conflict=true}if(ii.note)remarks.push(ii.note)}
   const allExact=pairs.length&&pairs.every(x=>x.status==='EXACT_MATCH');
   let status;
   if(!occs.length)status=!p?'NOT_VERIFIED':off.found&&!conflict?'CATALOGUE_MATCH_NO_LOCAL_CONTENT':off.found?'CONFLICT_REQUIRES_REVIEW':'NOT_VERIFIED';
   else if(conflict)status='CONFLICT_REQUIRES_REVIEW';
   else if(off.web_state==='UNAVAILABLE'||off.web_state==='NOT_FETCHED'||off.web_state==='NOT_CHECKED')status=h&&p&&titlesAgree(tHP.status)?'LOCAL_AND_PDF_MATCHED':'NOT_VERIFIED';
+  else if(nonLatinTitle&&off.found)status='OFFICIAL_TITLE_USED_NON_LATIN';
   else if(h&&p&&off.found)status=allExact?'THREE_SOURCE_VERIFIED':'NORMALIZED_TITLE_MATCH';
   else if(h&&p&&!off.found)status='LOCAL_AND_PDF_MATCHED';
   else if(!h&&p&&off.found)status='PDF_AND_OFFICIAL_MATCHED_LOCAL_FOLDER_ONLY';
@@ -382,7 +394,10 @@ ${Object.entries(tally(r04,'Exception_Type')).map(([k,v])=>'- '+k+': '+v).join('
 - Folders: listed live from ${root}, ${MAX_DEPTH} levels deep, stopping at the first 9-digit folder; system folders skipped: ${excluded.join(', ')||'none'}. Inaccessible folders: ${inaccessible.length}.
 - HTML: only discipline-level index.html files (directly inside a 3-digit discipline folder) are treated as course catalogues; other HTML pages are not.
 - PDF: text extracted from NPTEL Courses.pdf with pypdf; Hindi and other non-Latin titles can be garbled by extraction and are flagged.
-- Title statuses: EXACT_MATCH identical; PREFIX_DIFFERENCE differs only by "NOC:"; NORMALIZED_MATCH differs only in case, spacing, punctuation or &/and; TITLE_CONFLICT anything else (including cut-off titles, which are noted).
+- Title statuses: EXACT_MATCH identical; PREFIX_DIFFERENCE differs only by "NOC:"; NORMALIZED_MATCH differs only in case, spacing, punctuation, accents or &/and, or once text attached by PDF extraction or editors is removed ("(Course sponsored by Aricent)", an institute name run into the title, " - IITM"); TRUNCATED_MATCH the shorter title is the start of the longer one and at least ${TRUNCATED_AT} characters long (the local catalogue cuts titles at 63-64); SUBTITLE_MATCH one title adds a series or college name before ":"; NON_LATIN_NOT_COMPARED Hindi/Tamil text or lost characters that cannot be compared; TITLE_CONFLICT anything else, including shorter prefixes under ${TRUNCATED_AT} characters.
+- Coordinators agree when a surname matches, allowing a one-letter spelling difference (two for names of 10+ letters); a shared surname such as Kumar or Chandra counts only with a matching given name; lists with no surname in common but a shared distinctive name ("Prof. Rajesh" / "Prof. Rajesh Kumar") agree with a note; "Multifaculty"-style placeholders count as no name given.
+- Institutes agree when one source's list contains the other's, or when one names NPTEL's coordinating institute for the ID (digits 4-6: 101 IIT Bombay, 102 IIT Delhi, 103 IIT Guwahati, 104 IIT Kanpur, 105 IIT Kharagpur, 106 IIT Madras, 107 IIT Roorkee, 108 IISc Bangalore) and the other the host institute; the reason is noted.
+- OFFICIAL_TITLE_USED_NON_LATIN (report 08): no conflict except a Hindi/Tamil title that the PDF or local HTML cannot reproduce; the nptel.ac.in title is the one to use.
 - Report 08 adds PDF_AND_OFFICIAL_MATCHED_LOCAL_FOLDER_ONLY: a local folder exists with no local HTML row, and the PDF and nptel.ac.in agree. OFFICIAL_MATCHED_NOT_IN_PDF: nptel.ac.in lists the ID (usually a course newer than the PDF) but the PDF does not; LOCAL_ID_REQUIRES_REVIEW is left for IDs found in neither. NORMALIZED_TITLE_MATCH means all three agree once "NOC:"/formatting is set aside; THREE_SOURCE_VERIFIED needs identical titles.
 - Lecture titles: HIGH = official downloads list names the same file; MEDIUM = official outline module and lecture numbers both match and no file names are published. Nothing is assigned by list position.
 - Counts come from the existing PostgreSQL inventory; files added to E: after the last scan are not counted.
