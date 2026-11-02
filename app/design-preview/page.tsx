@@ -1,4 +1,4 @@
 import type {Metadata} from 'next';
-import LibraryDesignPreview from '@/components/LibraryDesignPreview';
-export const metadata:Metadata={title:'MREM · LMS Design Comparison',description:'UI/UX-only preview of the MREM Digital Learning Library'};
-export default function DesignPreview(){return <LibraryDesignPreview/>;}
+import MremOpenLms from '@/components/MremOpenLms';
+export const metadata:Metadata={title:'MREM Digital Learning Library — Open LMS',description:'Open, no-login institutional learning UI concept with MREM branding and inline course resources'};
+export default function DesignPreview(){return <MremOpenLms/>;}
