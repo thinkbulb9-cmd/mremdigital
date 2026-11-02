@@ -4,19 +4,13 @@ import {usePathname} from 'next/navigation';
 import {useState} from 'react';
 import {Menu,X} from 'lucide-react';
 import QuickSearch from '@/components/lms/QuickSearch';
-const NAV=[['/','Discover'],['/departments','Departments'],['/video-courses','Video Courses'],['/web-courses','Web Courses'],['/study-materials','Study Materials']] as const;
-/** Compact desktop top bar with accessible expandable mobile navigation and keyboard-first search. No sidebar. */
+const NAV=[['/','Discover'],['/departments','Departments'],['/courses','Courses'],['/video-courses','Video Courses'],['/web-courses','Web Courses'],['/study-materials','Study Materials']] as const;
 export default function Header(){
- const path=usePathname(),[open,setOpen]=useState(false);
- const active=(href:string)=>href==='/'?path==='/':path===href||path.startsWith(href+'/')||(href==='/departments'&&path.startsWith('/courses'));
- return <header className="hdr"><div className="wrap">
-  <div className="hdr-row"><Link href="/" className="brand" aria-label="MREM Digital Learning Library home">
-   <img src="/brand/mrem-emblem.png" width={42} height={40} alt="MREM college emblem"/>
-   <span><b>MREM Digital Learning Library</b><small>An UGC Autonomous Institution</small></span>
-  </Link>
-  <nav className="nav" aria-label="Main">{NAV.map(([href,label])=><Link key={href} href={href} aria-current={active(href)?'page':undefined}>{label}</Link>)}</nav>
-  <QuickSearch/>
-  <button className="menu-btn" aria-expanded={open} aria-controls="mobile-nav" aria-label={open?'Close menu':'Open menu'} onClick={()=>setOpen(o=>!o)}>{open?<X size={20}/>:<Menu size={20}/>}</button>
-  </div><div id="mobile-nav" className="mobile-panel" hidden={!open}><nav aria-label="Mobile navigation">{NAV.map(([href,label])=><Link key={href} href={href} aria-current={active(href)?'page':undefined} onClick={()=>setOpen(false)}>{label}</Link>)}</nav></div>
- </div></header>;
+ const pathname=usePathname(),[menu,setMenu]=useState(false);
+ const active=(path:string)=>path==='/'?pathname==='/':pathname===path||pathname.startsWith(path+'/');
+ return <header className="xp-header"><div className="xp-container xp-header-content">
+  <Link href="/" className="xp-brand" aria-label="MREM Digital Learning Library homepage"><img src="/brand/mrem-emblem.png" width={45} height={45} alt="Official MREM emblem"/><span><strong>MREM</strong><small>Digital Learning Library</small></span></Link>
+  <nav className="xp-mainnav" aria-label="Student main navigation">{NAV.map(([path,label])=><Link key={path} href={path} className={active(path)?'on':''} aria-current={active(path)?'page':undefined}>{label}</Link>)}</nav>
+  <div className="xp-header-actions"><QuickSearch/><span className="xp-access"><span/> Open library</span><button type="button" className="xp-menu-btn" aria-expanded={menu} aria-controls="xp-mobile-navigation" onClick={()=>setMenu(v=>!v)} aria-label={menu?'Close navigation':'Open navigation'}>{menu?<X size={22}/>:<Menu size={22}/>}</button></div>
+ </div>{menu&&<nav id="xp-mobile-navigation" className="xp-mobile-menu" aria-label="Mobile navigation">{NAV.map(([p,t])=><Link key={p} href={p} onClick={()=>setMenu(false)}>{t}</Link>)}</nav>}</header>;
 }
