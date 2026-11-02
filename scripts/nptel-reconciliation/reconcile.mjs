@@ -265,6 +265,7 @@ try{
   else if(h&&p&&off.found)status=allExact?'THREE_SOURCE_VERIFIED':'NORMALIZED_TITLE_MATCH';
   else if(h&&p&&!off.found)status='LOCAL_AND_PDF_MATCHED';
   else if(!h&&p&&off.found)status='PDF_AND_OFFICIAL_MATCHED_LOCAL_FOLDER_ONLY';
+  else if(!p&&off.found)status='OFFICIAL_MATCHED_NOT_IN_PDF';
   else status='LOCAL_ID_REQUIRES_REVIEW';
   if(off.web_state==='UNAVAILABLE')remarks.push('nptel.ac.in did not answer for this course (page unavailable, not proven missing)');
   if(off.web_state==='NOT_FOUND')remarks.push('nptel.ac.in has no course with this ID (catalogue and course page both checked)');
@@ -319,9 +320,11 @@ try{
  const distinct=localIds.length,htmlIds=new Set(htmlRows.map(r=>r.id));
  const inAll3=localIds.filter(id=>pdf.has(id)&&officialFor(id).found).length;
  const v08=tally(r08.filter(r=>occById.has(r.Course_ID)),'Verification_Status');
+ const idCount=(os)=>new Set(os.map(o=>o.id)).size;
+ const notInPdf=localIds.filter(id=>!pdf.has(id)),notInPdfOfficial=notInPdf.filter(id=>officialFor(id).found).length;
  const bySem=semesters.map(s=>{const os=occ.filter(o=>o.sem===s);return {s,info:semInfo(s),occ:os.length,ids:new Set(os.map(o=>o.id)).size,
-  disc:disciplines.filter(d=>d.sem===s).length,html:os.filter(o=>o.html).length,pdf:os.filter(o=>pdf.has(o.id)).length,
-  vids:os.filter(o=>o.counts?.videos).length,pdfs:os.filter(o=>o.counts?.pdfs).length}});
+  disc:disciplines.filter(d=>d.sem===s).length,html:idCount(os.filter(o=>o.html)),pdf:idCount(os.filter(o=>pdf.has(o.id))),
+  vids:idCount(os.filter(o=>o.counts?.videos)),pdfs:idCount(os.filter(o=>o.counts?.pdfs))}});
  const courseWith=(f)=>new Set(occ.filter(f).map(o=>o.id)).size;
  const lectureIds=[...lectureSummary].filter(([,s])=>s.high).length,lectureIdsMed=[...lectureSummary].filter(([,s])=>!s.high&&s.medium).length;
  const md=`# NPTEL reconciliation summary — ${src.id} (${root})
@@ -342,7 +345,7 @@ Generated ${new Date().toISOString()} in ${Math.round((Date.now()-started)/1000)
 | PDF numbered records / distinct Subject IDs / duplicates | ${pdfRows.length} / ${pdf.size} / ${pdfDup.length} |
 | Official nptel.ac.in catalogue courses | ${catalogue?.count??'not fetched'} |
 | Distinct E: IDs found in PDF and on nptel.ac.in | ${inAll3} |
-| Distinct E: IDs missing from the PDF | ${localIds.filter(id=>!pdf.has(id)).length} |
+| Distinct E: IDs missing from the PDF | ${notInPdf.length} (listed on nptel.ac.in: ${notInPdfOfficial}; not on nptel.ac.in: ${notInPdf.length-notInPdfOfficial}) |
 | PDF Subject IDs with no folder on E: | ${pdfOnly.length} |
 | Folder occurrences with a matching HTML row | ${occ.filter(o=>o.html).length} |
 | Folder occurrences not listed in their HTML (FOLDER_ID_NOT_IN_HTML) | ${r02.filter(r=>r.HTML_Mapping_Status==='FOLDER_ID_NOT_IN_HTML').length} |
@@ -366,7 +369,9 @@ PDF-only IDs in report 08: ${Object.entries(tally(r08.filter(r=>!occById.has(r.C
 
 ## By academic folder
 
-| Folder | Year | Term | Discipline folders | Course folders | Distinct IDs | In HTML | In PDF | With videos | With PDFs |
+Course folders counts every course-ID folder (an ID can have more than one folder in a term); the columns after it count distinct course IDs.
+
+| Folder | Year | Term | Discipline folders | Course folders | Distinct IDs | IDs in HTML | IDs in PDF | IDs with videos | IDs with PDFs |
 |---|---|---|---|---|---|---|---|---|---|
 ${bySem.map(b=>`| ${b.s} | ${b.info.year} | ${b.info.term} | ${b.disc} | ${b.occ} | ${b.ids} | ${b.html} | ${b.pdf} | ${b.vids} | ${b.pdfs} |`).join('\n')}
 
@@ -378,7 +383,7 @@ ${Object.entries(tally(r04,'Exception_Type')).map(([k,v])=>'- '+k+': '+v).join('
 - HTML: only discipline-level index.html files (directly inside a 3-digit discipline folder) are treated as course catalogues; other HTML pages are not.
 - PDF: text extracted from NPTEL Courses.pdf with pypdf; Hindi and other non-Latin titles can be garbled by extraction and are flagged.
 - Title statuses: EXACT_MATCH identical; PREFIX_DIFFERENCE differs only by "NOC:"; NORMALIZED_MATCH differs only in case, spacing, punctuation or &/and; TITLE_CONFLICT anything else (including cut-off titles, which are noted).
-- Report 08 adds PDF_AND_OFFICIAL_MATCHED_LOCAL_FOLDER_ONLY: a local folder exists with no local HTML row, and the PDF and nptel.ac.in agree. NORMALIZED_TITLE_MATCH means all three agree once "NOC:"/formatting is set aside; THREE_SOURCE_VERIFIED needs identical titles.
+- Report 08 adds PDF_AND_OFFICIAL_MATCHED_LOCAL_FOLDER_ONLY: a local folder exists with no local HTML row, and the PDF and nptel.ac.in agree. OFFICIAL_MATCHED_NOT_IN_PDF: nptel.ac.in lists the ID (usually a course newer than the PDF) but the PDF does not; LOCAL_ID_REQUIRES_REVIEW is left for IDs found in neither. NORMALIZED_TITLE_MATCH means all three agree once "NOC:"/formatting is set aside; THREE_SOURCE_VERIFIED needs identical titles.
 - Lecture titles: HIGH = official downloads list names the same file; MEDIUM = official outline module and lecture numbers both match and no file names are published. Nothing is assigned by list position.
 - Counts come from the existing PostgreSQL inventory; files added to E: after the last scan are not counted.
 `;
