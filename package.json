@@ -8,6 +8,7 @@
     "start": "next start -H 127.0.0.1",
     "db:init": "node --env-file=.env.local scripts/init-db.mjs",
     "storage:add": "node --env-file=.env.local scripts/register-storage.mjs",
+    "storage:check": "node --env-file=.env.local scripts/storage-check.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
     "scan": "node --env-file=.env.local scripts/scan.mjs",
     "typecheck": "tsc --noEmit",

@@ -7,5 +7,6 @@ try { await client.query(await fs.readFile(new URL('../sql/schema.sql', import.m
  await client.query(await fs.readFile(new URL('../sql/staff-mapping.sql', import.meta.url), 'utf8'));
  await client.query(await fs.readFile(new URL('../sql/campus-catalog.sql', import.meta.url), 'utf8'));
  await client.query(await fs.readFile(new URL('../sql/legacy-catalogue.sql', import.meta.url), 'utf8'));
+ await client.query(await fs.readFile(new URL('../sql/storage-identity.sql', import.meta.url), 'utf8'));
  console.log('Base and staff mapping schemas initialized successfully'); }
 finally { await client.end(); }

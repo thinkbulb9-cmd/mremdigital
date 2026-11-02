@@ -7,6 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import pg from 'pg';
+import {probeRoot,verdict,recordAvailability} from './storage-identity.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL is required');
 const db=new pg.Client({connectionString:process.env.DATABASE_URL});
 const sourceId=process.argv[2]||'server1',BATCH=250;
@@ -37,10 +38,14 @@ function info(relative,filename){
 }
 await db.connect();
 try{
- const selection=await db.query('SELECT id,name,root_path FROM storage_sources WHERE enabled=TRUE AND id=$1',[sourceId]);
+ const selection=await db.query('SELECT id,name,root_path,volume_serial FROM storage_sources WHERE enabled=TRUE AND id=$1',[sourceId]);
  if(!selection.rowCount)throw Error('No registered source named '+sourceId);
- const source=selection.rows[0],root=await fs.realpath(source.root_path),scanId=randomUUID();
- if(!(await fs.stat(root)).isDirectory())throw Error('Source is not a folder');
+ const source=selection.rows[0],probe=await probeRoot(source.root_path),check=verdict(source,probe);
+ await recordAvailability(db,source.id,check,probe.serial);
+ // A disconnected or replaced disk is reported and left alone: its indexed records are not marked missing.
+ if(!check.scan){console.error('Not scanned: '+source.id+' '+check.reason);process.exitCode=3;await db.end();process.exit()}
+ if(check.reason)console.log(check.reason);
+ const root=probe.root,scanId=randomUUID();
  await db.query("INSERT INTO scan_jobs(id,source_id,status) VALUES($1,$2,'running')",[scanId,source.id]);
  let filesSeen=0,foldersSeen=0,warnings=0;
  const stack=[''],files=[],folders=[],examples=[];
