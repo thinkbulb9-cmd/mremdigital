@@ -17,6 +17,9 @@ export default async function Lesson({params}:P){
  const r=l.resource,title=r.title||r.name;
  const back='/courses/'+c.code+(l.offering&&l.offering!==c.offerings[0]?.value?'?offering='+encodeURIComponent(l.offering):'');
  const related=l.group==='video'?[...await resources(c.code,l.offering,'pdf',1,6),...await resources(c.code,l.offering,'document',1,6)].slice(0,6):[];
+ const [previous,next]=await Promise.all([l.prev?lesson(c.code,l.prev):Promise.resolve(null),l.next?lesson(c.code,l.next):Promise.resolve(null)]);
+ const previousLabel=previous?.resource.title||previous?.resource.name||'Previous lesson';
+ const nextLabel=next?.resource.title||next?.resource.name||'Next lesson';
  return <>
   <div className="lesson-head"><div style={{minWidth:0}}>
    <Crumbs items={[['Home','/'],...(c.department?[[c.department,'/departments/'+c.deptSlug] as [string,string]]:[]),[courseName(c),back],[title]]}/>
@@ -28,8 +31,8 @@ export default async function Lesson({params}:P){
    <Link className="btn btn-ghost" href={back}><ArrowLeft size={16}/> Back to course</Link>
    <DownloadLink r={{id:r.id,name:r.name,ext:r.ext,size:r.size,title}}/>
    <span className="spacer"/>
-   <Link className="btn btn-ghost" href={l.prev?`/courses/${c.code}/lessons/${l.prev}`:back} aria-disabled={!l.prev}><ChevronLeft size={16}/> Previous</Link>
-   <Link className="btn btn-primary" href={l.next?`/courses/${c.code}/lessons/${l.next}`:back} aria-disabled={!l.next}>Next <ChevronRight size={16}/></Link>
+   <Link className="btn btn-ghost" href={l.prev?`/courses/${c.code}/lessons/${l.prev}`:back} aria-disabled={!l.prev}><ChevronLeft size={16}/> <span className="lesson-name-link"><small>Previous lesson</small>{l.prev?previousLabel:"Back to course"}</span></Link>
+   <Link className="btn btn-primary" href={l.next?`/courses/${c.code}/lessons/${l.next}`:back} aria-disabled={!l.next}><span className="lesson-name-link"><small>Next lesson</small>{l.next?nextLabel:"Back to course"}</span><ChevronRight size={16}/></Link>
   </div>
   {related.length>0&&<section className="sec"><div className="sec-head"><div><span className="eyebrow">Study materials</span><h2 className="h-sec">From this course</h2></div></div>
    <div className="list">{related.map(x=><Link key={x.id} className="row" href={`/courses/${c.code}/lessons/${x.id}`}><span className="row-n">{x.ext.replace('.','').toUpperCase().slice(0,4)}</span>
