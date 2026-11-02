@@ -1,71 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { readFile } from 'node:fs/promises';
 import { campusMode } from '@/lib/campus-mode';
 import { visibleSql } from '@/lib/campus-catalog';
-import { renderSafeHtml, SAFE_HTML_HEADERS } from '@/lib/safe-html';
+import { renderSafeHtml, safeHtmlHeaders } from '@/lib/safe-html';
 import { decodeHtmlBytes } from '@/scripts/legacy-catalogue/parse.mjs';
 import { createRangedFileStream } from '@/lib/range-file-stream';
-import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { mimeFor, resolveStoredFile } from '@/lib/storage';
-import { previewFiles, demoEnabled, makeDemoPdf } from '@/lib/demo';
-import { isMacPilot, getMacPilotFile } from '@/lib/mac-pilot';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
-export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}){
- if(!campusMode()&&!(await authorized()))return new Response('Unauthorized',{status:401});
- const {id}=await context.params;
- if(!/^\d+$/.test(id))return new Response('Bad file ID',{status:400});
- if(demoEnabled()){
-  const item=previewFiles.find(f=>f.id===id);
-  if(!item)return new Response('Not found',{status:404});
-  const inline=req.nextUrl.searchParams.get('inline')==='1';
-  if(item.kind==='Video'){
-   // The synthetic sample is a tiny, original MP4 committed in public/demo.
-   return NextResponse.redirect(new URL('/demo/mrem-preview.mp4',req.url),307);
-  }
-  if(item.ext==='.pdf'){
-   const pdf=makeDemoPdf();
-   return new Response(pdf.buffer as ArrayBuffer,{headers:{
-    'Content-Type':'application/pdf',
-    'Content-Disposition':`${inline?'inline':'attachment'}; filename="MREM-Demo-Notes.pdf"`,
-    'Content-Length':String(pdf.byteLength),
-    'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'
-   }});
-  }
-  const content='MREM DIGITAL LIBRARY - DEMO RESOURCE ONLY\n\n'+item.name+'\n\n'+item.content+'\n\nNo real NPTEL resources or college files are attached.\n';
-  return new Response(content,{headers:{
-   'Content-Type':'text/plain; charset=utf-8',
-   'Content-Disposition':`${inline?'inline':'attachment'}; filename="${item.name.replace(/[^a-zA-Z0-9_. -]/g,'_')}"`,
-   'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'
-  }});
- }
+/** File types students may receive at all, and those shown inline (others are offered as downloads). */
+const PERMITTED=['.mp4','.webm','.mov','.m4v','.avi','.mkv','.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.gif','.webp','.doc','.docx','.ppt','.pptx','.xls','.xlsx','.csv','.zip','.rar','.7z'];
+const INLINE=['.mp4','.webm','.m4v','.mov','.pdf','.txt','.md','.png','.jpg','.jpeg','.gif','.webp'];
 
- let file: {name:string;ext:string;root_path:string;rel_path:string}|null;
- if(isMacPilot()){
-  file=await getMacPilotFile(id);
- }else{
-  const q=await db().query(campusMode()?
-   `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id WHERE r.id=$1 AND ${visibleSql()}`:
-   `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
-    JOIN resource_assignments a ON a.resource_id=r.id
-    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
-  file=q.rows[0]||null;
- }
+/** Streams one file by its database ID: only files visible to students (see visibleSql), only permitted types, only inside
+ * the registered storage root, with HTTP range support for video seeking. HTML is rebuilt as a static sandboxed page. */
+export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}){
+ if(!campusMode())return new Response('Not available',{status:404});
+ const {id}=await context.params;
+ if(!/^\d{1,18}$/.test(id))return new Response('Bad file ID',{status:400});
+ const file=(await db().query(`SELECT r.source_id,r.rel_path,r.name,lower(r.ext) AS ext,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
+  WHERE r.id=$1 AND ${visibleSql()}`,[id])).rows[0] as {source_id:string;rel_path:string;name:string;ext:string;root_path:string}|undefined;
  if(!file)return new Response('Not found',{status:404});
- if(campusMode()&&!['.mp4','.webm','.mov','.m4v','.avi','.mkv','.pdf','.txt','.md','.html','.htm','.jpg','.jpeg','.png','.webp','.doc','.docx','.ppt','.pptx','.xls','.xlsx','.csv','.zip','.rar','.7z'].includes(file.ext))return new Response('File type not permitted',{status:415});
+ if(!PERMITTED.includes(file.ext))return new Response('File type not permitted',{status:415});
  let absolute:string,size:number;
  try{({absolute,size}=await resolveStoredFile(file.root_path,file.rel_path));}
  catch{return new Response('File unavailable on attached storage',{status:404});}
- if(!Number.isSafeInteger(size))return new Response('File too large for pilot file server',{status:501});
+ if(!Number.isSafeInteger(size))return new Response('File too large to stream',{status:501});
+ const inlineRequested=req.nextUrl.searchParams.get('inline')==='1';
  // Legacy HTML may contain active JavaScript: rebuild it as a static sandboxed page, never run it on the campus origin.
- if(campusMode()&&req.nextUrl.searchParams.get('inline')==='1'&&['.html','.htm'].includes(file.ext)){
+ if(inlineRequested&&['.html','.htm'].includes(file.ext)){
   if(size>2*1024*1024)return new Response('HTML is too large to preview safely. Use Download.',{status:413});
-  const f=file as typeof file&{source_id:string};
-  const html=await renderSafeHtml(decodeHtmlBytes(await readFile(absolute)),{source_id:f.source_id,rel_path:f.rel_path,root_path:f.root_path,name:f.name});
-  return new Response(html,{headers:SAFE_HTML_HEADERS});
+  // The origin the browser used (a reverse proxy passes it on), so images in the page are allowed from the library only.
+  const origin=(req.headers.get('x-forwarded-proto')||req.nextUrl.protocol.replace(':',''))+'://'+(req.headers.get('x-forwarded-host')||req.headers.get('host')||req.nextUrl.host);
+  return new Response(await renderSafeHtml(decodeHtmlBytes(await readFile(absolute)),file),{headers:safeHtmlHeaders(origin)});
  }
-
  const range=req.headers.get('range');
  let start=0,end=size-1;
  if(range){
@@ -77,7 +46,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end>=size||start>end)
    return new Response('Range Not Satisfiable',{status:416,headers:{'Content-Range':`bytes */${size}`}});
  }
- const inline=req.nextUrl.searchParams.get('inline')==='1' && ['.mp4','.webm','.m4v','.mov','.pdf','.txt','.md','.png','.jpg','.jpeg','.webp'].includes(file.ext);
+ const inline=inlineRequested&&INLINE.includes(file.ext);
  const safeFilename=String(file.name).replace(/[\r\n"\\]/g,'_');
  const headers:Record<string,string>={
   'Content-Type':mimeFor(file.ext),
@@ -86,7 +55,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   'Accept-Ranges':'bytes','X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'
  };
  if(range)headers['Content-Range']=`bytes ${start}-${end}/${size}`;
- if(!isMacPilot())db().query('INSERT INTO download_events(resource_id,range_request) VALUES($1,$2)',[id,Boolean(range)]).catch(()=>{});
+ db().query('INSERT INTO download_events(resource_id,range_request) VALUES($1,$2)',[id,Boolean(range)]).catch(()=>{});
  if(size===0)return new Response(null,{status:200,headers});
  let stream: ReadableStream<Uint8Array>;
  try { stream=await createRangedFileStream(absolute,start,end); }

@@ -76,8 +76,11 @@ export async function renderSafeHtml(raw:string,file:{source_id:string;rel_path:
  return '<!doctype html>'+$.html();
 }
 
-/** The response for a rendered page: sandboxed (no scripts, no same-origin access) and limited to library images. */
-export const SAFE_HTML_HEADERS={'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff',
- // No frame-ancestors: under "sandbox" the page has an opaque origin, so 'self' would never match the library page.
- 'Content-Security-Policy':"sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; media-src 'self'; form-action 'none'",
- 'Referrer-Policy':'no-referrer'};
+/** The response for a rendered page: sandboxed (no scripts, no same-origin access) and limited to library images.
+ * Under "sandbox" the page has an opaque origin, so 'self' would match nothing: the library's own origin is named instead.
+ * No frame-ancestors either, for the same reason. */
+export function safeHtmlHeaders(origin:string){
+ const o=/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(origin)?origin:"'self'";
+ return {'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',
+  'Content-Security-Policy':`sandbox; default-src 'none'; img-src ${o} data:; style-src 'unsafe-inline'; media-src ${o}; form-action 'none'`};
+}

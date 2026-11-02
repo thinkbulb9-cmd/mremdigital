@@ -17,3 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_resources_uncategorized_folder ON resources(sourc
  WHERE course_code IS NULL AND availability='available';
 CREATE INDEX IF NOT EXISTS idx_resources_folder ON resources(source_id,folder_rel_path);
 CREATE INDEX IF NOT EXISTS idx_resources_course_semester ON resources(course_code,semester_name) WHERE availability='available';
+-- NPTEL content type of each course (Video or Web) and where it came from; Web Courses are listed from this.
+ALTER TABLE course_catalog ADD COLUMN IF NOT EXISTS content_type TEXT;
+ALTER TABLE course_catalog ADD COLUMN IF NOT EXISTS content_type_source TEXT;
+CREATE INDEX IF NOT EXISTS idx_course_catalog_content_type ON course_catalog(content_type);

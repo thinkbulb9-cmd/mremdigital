@@ -19,7 +19,7 @@ export const mimeFor=(ext:string):string=>({
  '.txt':'text/plain; charset=utf-8','.md':'text/plain; charset=utf-8',
  '.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  '.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation',
- '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
+ '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.webp':'image/webp',
  '.html':'text/html; charset=utf-8','.htm':'text/html; charset=utf-8',
  '.xls':'application/vnd.ms-excel','.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
  '.csv':'text/csv; charset=utf-8','.zip':'application/zip'

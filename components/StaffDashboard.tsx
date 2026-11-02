@@ -1,6 +1,5 @@
 'use client';
 import { useCallback,useEffect,useMemo,useState } from 'react';
-import { demoStaffRequest } from './staff-demo-fixtures';
 import { BookOpen,Check,CheckCircle,ChevronRight,ClipboardCheck,Database,File,FolderOpen,HardDrive,LockKeyhole,LogOut,RefreshCw,Search,ShieldCheck,Users,X,FileText,Activity } from 'lucide-react';
 type Role='hod'|'librarian'|'super_admin';
 type Staff={id:string;username:string;display_name:string;role:Role;department_id:string|null;department_code:string|null};
@@ -20,8 +19,8 @@ const request=async (url:string,init?:RequestInit)=>{
  if(!response.ok)throw new Error(json.error||'Request failed');
  return json;
 };
-export default function StaffDashboard({staff,demo=false}:{staff:Staff;demo?:boolean}){
- const api=(url:string,init?:RequestInit)=>demo?demoStaffRequest(url,init,staff):request(url,init);
+export default function StaffDashboard({staff}:{staff:Staff}){
+ const api=request;
  const [tab,setTab]=useState<'explore'|'requests'|'audit'>('explore');
  const [data,setData]=useState<Catalog|null>(null);
  const [source,setSource]=useState(''),[search,setSearch]=useState('');
@@ -48,7 +47,7 @@ export default function StaffDashboard({staff,demo=false}:{staff:Staff;demo?:boo
    if(!department&&catalog.departments.length)setDepartment(catalog.departments[0].id);
   }catch(e){setError(e instanceof Error?e.message:'Cannot load dashboard');}
   finally{setLoading(false);}
- },[source,search,department,demo,staff]);
+ },[source,search,department,staff]);
  useEffect(()=>{const t=setTimeout(()=>{void load();},260);return()=>clearTimeout(t);},[load]);
  function choosePath(s:'folder'|'file',p:string){setScope(s);setPath(p);setMessage('');}
  async function propose(){
@@ -73,7 +72,7 @@ export default function StaffDashboard({staff,demo=false}:{staff:Staff;demo?:boo
   }catch(e){setError(e instanceof Error?e.message:'Review failed');}
   finally{setWorking(false);}
  }
- async function logout(){if(demo){window.location.assign('/');return;}await api('/api/staff/logout',{method:'POST'});window.location.assign('/staff/login');}
+ async function logout(){await api('/api/staff/logout',{method:'POST'});window.location.assign('/staff/login');}
  const pending=mappings.filter(x=>x.status==='pending').length;
  const approved=mappings.filter(x=>x.status==='approved').length;
  return <div className="staffLayout">
@@ -87,7 +86,6 @@ export default function StaffDashboard({staff,demo=false}:{staff:Staff;demo?:boo
    <div className="staffSidebarBottom"><div className="staffUserIcon"><Users size={18}/></div><div><strong>{staff.display_name}</strong><small>{staff.username}</small></div><button onClick={logout} title="Sign out" aria-label="Sign out"><LogOut size={17}/></button></div>
   </aside>
   <main className="staffMain">
-   {demo&&<div className="staffDemoBanner">SAMPLE DATA PREVIEW — No real disk access or staff credentials. Actions are simulated and reset on reload. <span><a href="/staff/demo?role=hod">HOD view</a> · <a href="/staff/demo?role=librarian">Librarian view</a></span></div>}
    <div className="staffTop"><div><div className="eyebrow">MREM WINDOWS SERVER / CONTENT MANAGEMENT</div><h1>{tab==='explore'?'Storage & Department Mapping':tab==='requests'?'Mapping Approvals':'Audit Trail'}</h1><p>Organize library resources without moving, renaming, or copying source files.</p></div><button className="staffRefresh" disabled={loading} onClick={()=>void load()}><RefreshCw size={15}/> Refresh</button></div>
    {error&&<div className="staffError" role="alert">{error}</div>}
    {message&&<div className="staffSuccess" role="status"><CheckCircle size={17}/>{message}</div>}
