@@ -1,53 +1,43 @@
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {Building2,Code2,GraduationCap,Play,ShieldCheck} from 'lucide-react';
-import {Crumbs,Empty,Pager,courseName,nice,withQuery} from '@/components/lms/ui';
-import {sizeOf} from '@/lib/format';
 import {course,resources,GROUPS,type Group} from '@/lib/campus-catalog';
 import {departmentArt} from '@/lib/department-art';
-
-const LABEL:Record<Group,string>={video:'Videos',pdf:'PDFs',html:'Web pages',document:'Documents',other:'Other files'};
+import {sizeOf} from '@/lib/format';
+import {withQuery} from '@/components/lms/ui';
+import {XpBreadcrumb,XpEmpty,XpPager,XpResourceLine,courseTitle,number} from '@/components/lms/LiveExperienceParts';
+const LABEL:Record<Group,string>={video:'Video lessons',pdf:'PDF notes',html:'Web pages',document:'Documents',other:'Other files'};
 type P={params:Promise<{courseId:string}>;searchParams:Promise<{offering?:string;group?:string;page?:string}>};
-export async function generateMetadata({params}:P){const c=await course((await params).courseId);return {title:(c?courseName(c):'Course')+' · MREM Digital Learning Library'}}
-
-/** Course overview: offerings (semesters on any drive), resource groups as tabs, and the lesson list. No sidebar. */
+export async function generateMetadata({params}:P){const c=await course((await params).courseId);return {title:(c?courseTitle(c):'Course')+' · MREM Digital Learning Library'}}
 export default async function CoursePage({params,searchParams}:P){
- const {courseId}=await params,sp=await searchParams;
- const c=await course(courseId);
- if(!c)notFound();
- const off=c.offerings.find(o=>o.value===sp.offering)||c.offerings[0];
- if(!off)notFound();
+ const {courseId}=await params,sp=await searchParams,c=await course(courseId);if(!c)notFound();
+ const off=c.offerings.find(o=>o.value===sp.offering)||c.offerings[0];if(!off)notFound();
  const groups=(Object.keys(GROUPS) as Group[]).filter(g=>off[g]>0);
  const group=groups.includes(sp.group as Group)?sp.group as Group:groups[0];
- const page=Number(sp.page)||1,limit=60;
+ const page=Math.max(1,Number(sp.page)||1),limit=60;
  const list=group?await resources(c.code,off.value,group,page,limit):[];
- const art=departmentArt(c.department||'general');
- const href=(p:Record<string,string|number|undefined>)=>withQuery('/courses/'+c.code,{offering:off.value===c.offerings[0].value?undefined:off.value,group,...p});
- return <>
-  <section className="course-hero">
-   <div>
-    <Crumbs items={[['Home','/'],...(c.department?[[c.department,'/departments/'+c.deptSlug] as [string,string]]:[['Courses','/courses'] as [string,string]]),[courseName(c)]]}/>
-    <h1 className="h-page">{courseName(c)}</h1>
-    <div className="facts">
-     {c.instructor&&<span><GraduationCap size={16}/> {c.instructor}</span>}{c.institution&&<span><Building2 size={16}/> {c.institution}</span>}
-     <span>Course ID {c.code}</span>{c.titleVerified&&<span className="verified"><ShieldCheck size={16}/> Verified title</span>}
+ const link=(p:Record<string,string|number|undefined>)=>withQuery('/courses/'+c.code,{offering:off.value!==c.offerings[0].value?off.value:undefined,group,...p});
+ const art=departmentArt(c.department||'general'),start=list[0];
+ return <div className="xp-container xp-inner xp-study">
+  <XpBreadcrumb links={[{text:'Discover',href:'/'},{text:c.department||'Courses',href:c.deptSlug?'/departments/'+c.deptSlug:'/courses'},{text:courseTitle(c)}]}/>
+  <div className="xp-study-heading"><div><span className="xp-eyebrow">{c.isWeb?'WEB COURSE':'ACADEMIC COURSE'} · {c.code}</span>
+   <h1>{courseTitle(c)}</h1><p><GraduationCap size={16}/>{[c.instructor,c.institution].filter(Boolean).join(' · ')||c.department||'Academic library'} {c.titleVerified&&<span className="xp-verified"><ShieldCheck size={15}/> Verified title</span>}</p>
+  </div></div>
+  <div className="xp-study-columns">
+   <div><div className="xp-course-preview" style={{backgroundImage:'url('+art.src+')'}}>
+    <div><span>LEARNING WORKSPACE</span><h2>Designed to help you focus.</h2>
+     <p>{number(c.files)} available resources · {c.offerings.length} academic {c.offerings.length===1?'offering':'offerings'}</p>
+     {start&&<Link href={'/courses/'+c.code+'/lessons/'+start.id}><Play size={17} fill="currentColor"/> Start {group==='video'?'learning':'reading'}</Link>}
     </div>
-    {list[0]&&<div className="lesson-nav"><Link className="btn btn-primary" href={`/courses/${c.code}/lessons/${list[0].id}`}><Play size={16}/> Start with {group==='video'?'the first lecture':'the first item'}</Link>
-     {c.isWeb&&c.deptSlug&&<Link className="btn btn-ghost" href={`/web-courses/${c.deptSlug}/${c.code}`}><Code2 size={16}/> Open as web course</Link>}</div>}
+   </div><div className="xp-about"><h2>About this course</h2><p>{courseTitle(c)} · Course ID {c.code}. Browse the original course materials using the verified information available in the MREM library.</p>
+    {c.isWeb&&c.deptSlug&&<Link className="xp-web-link" href={'/web-courses/'+c.deptSlug+'/'+c.code}><Code2 size={16}/> Open Web Course <span>→</span></Link>}
+   </div></div>
+   <div className="xp-lesson-list"><div><span className="xp-eyebrow">COURSE CONTENT</span><h2>Choose a resource</h2><p>Actual indexed files · original names retained where titles are not verified</p></div>
+    {c.offerings.length>1&&<div className="xp-offering-bar" aria-label="Academic offering">{c.offerings.map(o=><Link key={o.value} className={o.value===off.value?'active':''} href={withQuery('/courses/'+c.code,{offering:o.value===c.offerings[0].value?undefined:o.value})}>{o.label}</Link>)}</div>}
+    <div className="xp-resource-filters" role="group" aria-label="Resource type">{groups.map(g=><Link key={g} className={g===group?'active':''} href={link({group:g,page:undefined})}>{LABEL[g]} <small>{number(off[g])}</small></Link>)}</div>
+    {list.length?list.map((r,i)=><XpResourceLine key={r.id} code={c.code} id={r.id} index={(page-1)*limit+i+1} title={r.title||r.name} details={[r.title?r.name:'',r.module?'Module '+r.module:'',sizeOf(r.size)].filter(Boolean).join(' · ')}/>):<XpEmpty title="No resources available" description="Try another academic offering or resource type."/>}
+    {group&&<XpPager page={page} pages={Math.max(1,Math.ceil(off[group]/limit))} total={off[group]} href={p=>link({page:p})}/>}
    </div>
-   <img src={art.src} alt={art.alt} width={640} height={400}/>
-  </section>
-  {c.offerings.length>1&&<div className="chips" role="group" aria-label="Academic offering" style={{marginBottom:16}}>{c.offerings.map(o=>
-   <Link key={o.value||'web'} className="chip" href={withQuery('/courses/'+c.code,{offering:o.value===c.offerings[0].value?undefined:o.value})} aria-current={o===off?'true':undefined}>
-    {o.label}<small>{nice((Object.keys(GROUPS) as Group[]).reduce((a,g)=>a+o[g],0))}</small></Link>)}</div>}
-  {groups.length?<>
-   <nav className="tabs" aria-label="Resource type">{groups.map(g=><Link key={g} href={href({group:g,page:undefined})} aria-current={g===group?'page':undefined}>{LABEL[g]}<small>{nice(off[g])}</small></Link>)}</nav>
-   <div className="list">{list.map((r,i)=><Link key={r.id} className="row" href={`/courses/${c.code}/lessons/${r.id}`}>
-    <span className="row-n">{(page-1)*limit+i+1}</span>
-    <span className="row-t"><strong>{r.title||r.name}</strong><small>{[r.title?r.name:'',r.module?'Module '+r.module:'',sizeOf(r.size)].filter(Boolean).join(' · ')}</small></span>
-   </Link>)}</div>
-   <Pager page={page} pages={Math.max(1,Math.ceil(off[group]/limit))} total={off[group]} unit={LABEL[group].toLowerCase()} href={p=>href({page:p})}/>
-   <p className="note">Lecture titles appear only when they are tied to the exact file by the course catalogue or the official NPTEL lecture list; other items keep their original file names.</p>
-  </>:<Empty title="No learning resources yet" text="This course has no files available to students in this offering."/>}
- </>;
+  </div>
+ </div>;
 }
