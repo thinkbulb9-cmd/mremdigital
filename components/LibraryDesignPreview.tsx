@@ -57,6 +57,7 @@ export default function LibraryDesignPreview(){
  const [playing,setPlaying]=useState(false);
  const [videoError,setVideoError]=useState(false);
  const [lessonPanelOpen,setLessonPanelOpen]=useState(true);
+ const [mobileLessons,setMobileLessons]=useState(false);
  const selectedResource=resources.find(x=>x.id===resourceId)||resources[0];
  const visibleCourses=useMemo(()=>courses.filter(c=>
   (section!=='department'||c.department===department)&&
@@ -66,9 +67,9 @@ export default function LibraryDesignPreview(){
  const countFor=(name:string)=>courses.filter(c=>c.department===name).length;
  const closeMobile=()=>setMobileOpen(false);
  function openDepartment(name:string){setDepartment(name);setSection('department');setFilter('all');setQuery('');closeMobile()}
- function openCourse(next:Course){setCourse(next);setDepartment(next.department);setResourceId('v1');setPlaying(false);setVideoError(false);setSection('course');setLessonPanelOpen(true);closeMobile()}
+ function openCourse(next:Course){setCourse(next);setDepartment(next.department);setResourceId('v1');setPlaying(false);setVideoError(false);setSection('course');setLessonPanelOpen(true);setMobileLessons(false);closeMobile()}
  function openSection(next:Section){setSection(next);setQuery('');setFilter('all');closeMobile()}
- function selectResource(id:string){setResourceId(id);setPlaying(false);setVideoError(false);closeMobile()}
+ function selectResource(id:string){setResourceId(id);setPlaying(false);setVideoError(false);setMobileLessons(false);closeMobile()}
  function searchChange(v:string){setQuery(v);if(v.trim())setSection('catalogue')}
  const pageLabel=section==='home'?'Overview':section==='catalogue'?'Course catalogue':section==='department'?department:section==='uncategorized'?'Uncategorized Resources':course.title;
  return <div className="lp-app">
@@ -109,9 +110,10 @@ export default function LibraryDesignPreview(){
    </header>
    <div className="lp-notice"><Sparkles size={15}/><span><strong>UI/UX comparison build.</strong> Illustrative sample courses and lessons only; no live E:, F:, G: or H: content and no database changes.</span><button onClick={()=>openSection('home')} aria-label="Return to overview"><X size={14}/></button></div>
 
-   <div className={'lp-frame '+(section==='home'||section==='uncategorized'?'lp-frame-single':'')}>
+   <div className={'lp-frame '+(section==='home'||section==='uncategorized'?'lp-frame-single':'')+(section==='course'?' lp-frame-course':'')}>
+     {section==='course'&&mobileLessons&&<button className="lp-lesson-backdrop" aria-label="Close lesson list" onClick={()=>setMobileLessons(false)}/> }
      {(section==='course'||section==='department'||section==='catalogue')&&
-      <aside className={'lp-context '+(section==='course'&&!lessonPanelOpen?'lp-context-collapsed':'')} aria-label="Context navigation">
+      <aside className={'lp-context '+(section==='course'&&!lessonPanelOpen?'lp-context-collapsed':'')+(section==='course'&&mobileLessons?' lp-mobile-lessons-open':'')} aria-label="Context navigation">
        {section==='course'?<>
         <div className="lp-context-header"><button className="lp-context-back" onClick={()=>openDepartment(course.department)}><ChevronLeft size={16}/> All courses</button><button className="lp-plain-icon" title="Collapse course contents" onClick={()=>setLessonPanelOpen(v=>!v)}><PanelLeftClose size={18}/></button></div>
         {lessonPanelOpen&&<>
@@ -153,6 +155,7 @@ export default function LibraryDesignPreview(){
       </>}
       {section==='course'&&<>
        <div className="lp-course-top">
+        <button className="lp-mobile-lessons-button" onClick={()=>setMobileLessons(true)}><Layers3 size={16}/> Browse course lessons <ChevronRight size={15}/></button>
         <div className="lp-eyebrow">LEARNING WORKSPACE <ChevronRight size={12}/> {course.department}</div>
         <h1>{course.title}</h1><div className="lp-course-meta"><span><GraduationCap size={15}/>{course.faculty}</span><span><BookText size={15}/>{course.institute}</span><span><Layers3 size={15}/>{course.reference?'Reference catalogue sample':'Demonstration content'}</span></div>
        </div>
