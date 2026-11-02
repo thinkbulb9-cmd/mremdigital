@@ -4,7 +4,7 @@ import {departments,findCourses} from '@/lib/campus-catalog';
 import {XpBreadcrumb,XpCourseCard,XpEmpty,XpHeading,XpPager} from '@/components/lms/LiveExperienceParts';
 import {withQuery} from '@/components/lms/ui';
 type P={params:Promise<{department:string}>;searchParams:Promise<{page?:string;q?:string}>};
-export async function generateMetadata({params}:P){const d=(await departments(c=>c.isWeb)).find(x=>x.slug===(await params).department);return {title:(d?.name||'Department')+' · Web Courses'}}
+export async function generateMetadata({params}:P){const {department}=await params;const d=(await departments(c=>c.isWeb)).find(x=>x.slug===department);return {title:(d?.name||'Department')+' · Web Courses'}}
 export default async function WebDepartment({params,searchParams}:P){
  const {department}=await params,sp=await searchParams;
  const d=(await departments(c=>c.isWeb)).find(x=>x.slug===department);if(!d)notFound();
