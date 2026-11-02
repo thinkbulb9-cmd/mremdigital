@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'node:fs/promises';
 import { campusMode } from '@/lib/campus-mode';
-import { approvalRequired } from '@/lib/campus-publication';
+import { visibleSql } from '@/lib/campus-catalog';
+import { renderSafeHtml, SAFE_HTML_HEADERS } from '@/lib/safe-html';
+import { decodeHtmlBytes } from '@/scripts/legacy-catalogue/parse.mjs';
 import { createRangedFileStream } from '@/lib/range-file-stream';
 import { authorized } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -44,8 +46,7 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
   file=await getMacPilotFile(id);
  }else{
   const q=await db().query(campusMode()?
-   `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
-    WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE ${approvalRequired()?"AND EXISTS(SELECT 1 FROM campus_publications p WHERE p.course_code=r.course_code AND p.approved=TRUE)":""}`:
+   `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id WHERE r.id=$1 AND ${visibleSql()}`:
    `SELECT r.*,s.root_path FROM resources r JOIN storage_sources s ON s.id=r.source_id
     JOIN resource_assignments a ON a.resource_id=r.id
     WHERE r.id=$1 AND r.availability='available' AND s.enabled=TRUE`,[id]);
@@ -57,17 +58,12 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
  try{({absolute,size}=await resolveStoredFile(file.root_path,file.rel_path));}
  catch{return new Response('File unavailable on attached storage',{status:404});}
  if(!Number.isSafeInteger(size))return new Response('File too large for pilot file server',{status:501});
- // Legacy HTML may contain active JavaScript; render escaped source, never execute it with campus origin privileges.
+ // Legacy HTML may contain active JavaScript: rebuild it as a static sandboxed page, never run it on the campus origin.
  if(campusMode()&&req.nextUrl.searchParams.get('inline')==='1'&&['.html','.htm'].includes(file.ext)){
-  if(size>512*1024)return new Response('HTML is too large to preview safely. Use Download.',{status:413});
-  const raw=await readFile(absolute,'utf8');
-  const escaped=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const html='<!doctype html><meta charset="utf-8"><title>Safe HTML source preview</title>'+
-   '<style>body{font:13px/1.6 ui-monospace,Consolas,monospace;background:#f8fafc;color:#1e293b;padding:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>'+
-   '<h3>Static HTML source preview (scripts disabled)</h3><pre>'+escaped+'</pre>';
-  return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private,no-store',
-    'X-Content-Type-Options':'nosniff',
-    'Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'"}});
+  if(size>2*1024*1024)return new Response('HTML is too large to preview safely. Use Download.',{status:413});
+  const f=file as typeof file&{source_id:string};
+  const html=await renderSafeHtml(decodeHtmlBytes(await readFile(absolute)),{source_id:f.source_id,rel_path:f.rel_path,root_path:f.root_path,name:f.name});
+  return new Response(html,{headers:SAFE_HTML_HEADERS});
  }
 
  const range=req.headers.get('range');
@@ -75,7 +71,8 @@ export async function GET(req:NextRequest, context:{params:Promise<{id:string}>}
  if(range){
   const m=/^bytes=(\d*)-(\d*)$/.exec(range);
   if(!m||(!m[1]&&!m[2]))return new Response('Invalid Range',{status:416,headers:{'Content-Range':`bytes */${size}`}});
-  if(m[1]){start=Number(m[1]);end=m[2]?Number(m[2]):size-1;}
+  // A last-byte position past the end means "to the end" (RFC 9110 14.1.2), not an error.
+  if(m[1]){start=Number(m[1]);end=m[2]?Math.min(Number(m[2]),size-1):size-1;}
   else{const suffix=Number(m[2]);start=Math.max(0,size-suffix);end=size-1;}
   if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end>=size||start>end)
    return new Response('Range Not Satisfiable',{status:416,headers:{'Content-Range':`bytes */${size}`}});

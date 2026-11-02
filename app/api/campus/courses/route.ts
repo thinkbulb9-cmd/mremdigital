@@ -1,39 +1,27 @@
 import {NextRequest,NextResponse} from 'next/server';
-import {db} from '@/lib/db';
 import {campusMode} from '@/lib/campus-mode';
-import {approvalRequired} from '@/lib/campus-publication';
+import {courseSummaries,codesMatching,offeringLabel} from '@/lib/campus-catalog';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
+/** Student course catalogue across every enabled drive: one row per course ID, whichever drives hold its offerings. */
 export async function GET(req:NextRequest){
  if(!campusMode())return NextResponse.json({error:'Campus library is only available on the college server'},{status:404});
- const params=req.nextUrl.searchParams;
- const q=(params.get('q')||'').trim().toLowerCase().slice(0,100);
- const department=(params.get('department')||'').slice(0,120);
- const page=Math.min(100000,Math.max(1,parseInt(params.get('page')||'1',10)||1));
- const limit=24;
- const approved=approvalRequired()?" AND EXISTS(SELECT 1 FROM campus_publications p WHERE p.course_code=r.course_code AND p.approved=TRUE)":"";
- const sql="WITH counts AS ("+
-  "SELECT COALESCE(r.course_code,'UNCLASSIFIED') AS code,COUNT(*)::bigint AS files,"+
-  "COUNT(*) FILTER (WHERE r.kind='Video')::bigint AS videos "+
-  "FROM resources r JOIN storage_sources s ON s.id=r.source_id "+
-  "WHERE r.availability='available' AND s.enabled=TRUE"+approved+" GROUP BY COALESCE(r.course_code,'UNCLASSIFIED')),"+
-  "catalogue AS (SELECT t.code,t.files,t.videos,COALESCE(c.title,CASE WHEN t.code='UNCLASSIFIED' THEN 'Unclassified Materials' "+
-  "ELSE 'Course '||t.code END) AS title,COALESCE(c.department,'Unclassified') AS department,"+
-  "COALESCE(c.instructor,'') AS instructor,COALESCE(c.institution,'') AS institution,COALESCE(c.verified,FALSE) AS verified "+
-  "FROM counts t LEFT JOIN course_catalog c ON c.course_code=t.code) "+
-  "SELECT *,count(*) OVER() AS total FROM catalogue WHERE "+
-  "($1='' OR lower(title) LIKE '%'||$1||'%' OR lower(code) LIKE '%'||$1||'%' "+
-  "OR lower(department) LIKE '%'||$1||'%' OR lower(instructor) LIKE '%'||$1||'%' OR lower(institution) LIKE '%'||$1||'%' "+
-  // Lecture names count only when a catalogue or reviewer named them; generic "Lecture N" labels are never stored.
-  "OR EXISTS(SELECT 1 FROM legacy_lecture_titles lt WHERE lt.course_code=catalogue.code AND lt.confidence='high' AND lower(lt.title) LIKE '%'||$1||'%') "+
-  "OR EXISTS(SELECT 1 FROM course_lectures cl WHERE cl.course_code=catalogue.code AND cl.verified=TRUE AND lower(cl.title) LIKE '%'||$1||'%')) "+
-  "AND ($2='' OR department=$2) "+
-  "ORDER BY (department='Unclassified') ASC,department,title LIMIT $3 OFFSET $4";
- const out=await db().query(sql,[q,department,limit,(page-1)*limit]);
- const depts=await db().query("SELECT c.department FROM course_catalog c WHERE c.department NOT IN ('Unclassified','General') "+
-  (approvalRequired()?"AND EXISTS(SELECT 1 FROM campus_publications p WHERE p.course_code=c.course_code AND p.approved=TRUE) ":"")+
-  "GROUP BY c.department ORDER BY c.department");
- const total=out.rows.length?Number(out.rows[0].total):0;
- return NextResponse.json({items:out.rows.map(({total,...r})=>r),total,page,limit,
-  departments:depts.rows.map(x=>x.department)});
+ const p=req.nextUrl.searchParams;
+ const q=(p.get('q')||'').trim().toLowerCase().slice(0,100);
+ const department=(p.get('department')||'').slice(0,120);
+ const type=p.get('type')||'';
+ const offering=(p.get('offering')||'').slice(0,40);
+ const page=Math.min(100000,Math.max(1,parseInt(p.get('page')||'1',10)||1)),limit=24;
+ const all=await courseSummaries();
+ const deep=q?await codesMatching(q):new Set<string>();
+ const items=all.filter(c=>
+  (!department||c.department===department)&&
+  (type!=='video'||c.videos>0)&&(type!=='document'||c.documents>0)&&(type!=='html'||c.html>0)&&
+  (!offering||c.offerings.includes(offering))&&
+  (!q||deep.has(c.code)||[c.title,c.code,c.department,c.instructor,c.institution,...c.offerings.map(offeringLabel)].some(v=>v.toLowerCase().includes(q))))
+  // Named courses first, then those still identified only by course ID.
+  .sort((a,b)=>Number(!a.title)-Number(!b.title)||(a.title||a.code).localeCompare(b.title||b.code));
+ const offerings=[...new Set(all.flatMap(c=>c.offerings))];
+ return NextResponse.json({items:items.slice((page-1)*limit,page*limit).map(c=>({...c,offeringLabels:c.offerings.map(offeringLabel)})),
+  total:items.length,page,limit,offerings:offerings.map(o=>({value:o,label:offeringLabel(o)}))},{headers:{'Cache-Control':'no-store'}});
 }
