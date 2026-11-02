@@ -1,12 +1,10 @@
-import {DeptCard,Empty,PageHead} from '@/components/lms/ui';
 import {departments} from '@/lib/campus-catalog';
-export const metadata={title:'Web courses · MREM Digital Learning Library'};
-/** Web Courses: NPTEL web courses (pages, not videos), grouped by department. */
+import {XpBreadcrumb,XpDepartmentCard,XpEmpty,XpHeading} from '@/components/lms/LiveExperienceParts';
+export const metadata={title:'Web Courses · MREM Digital Learning Library'};
 export default async function WebCourses(){
- const list=await departments(c=>c.isWeb);
- return <>
-  <PageHead crumbs={[['Home','/'],['Web courses']]} eyebrow="Web courses" title="Web courses" lead="NPTEL web courses are read page by page. Choose a department to see its web courses."/>
-  {list.length?<div className="grid g-dept">{list.map(d=><DeptCard key={d.slug} name={d.name} count={d.courses} unit="web course" href={'/web-courses/'+d.slug}/>)}</div>:
-   <Empty title="No web courses yet" text="Web courses appear once their course pages are indexed and mapped."/>}
- </>;
+ const ds=await departments(c=>c.isWeb);
+ return <div className="xp-container xp-inner"><XpBreadcrumb links={[{text:'Discover',href:'/'},{text:'Web Courses'}]}/>
+  <XpHeading eyebrow="WEB-BASED LEARNING" title="Explore interactive reading." description="Verified Web Courses are organized by department, not by drive letter or archive folder."/>
+  {ds.length?<div className="xp-department-grid">{ds.map(d=><XpDepartmentCard key={d.slug} d={d} href={'/web-courses/'+d.slug}/>)}</div>:<XpEmpty title="No Web Courses published yet" description="Web Courses appear when verified course pages are indexed and approved."/>}
+ </div>;
 }
