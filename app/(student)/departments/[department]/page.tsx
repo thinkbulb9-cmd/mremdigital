@@ -5,7 +5,7 @@ import {departmentArt} from '@/lib/department-art';
 import {XpBreadcrumb,XpCourseCard,XpEmpty,XpPager,XpSectionHeading} from '@/components/lms/LiveExperienceParts';
 import {withQuery} from '@/components/lms/ui';
 type P={params:Promise<{department:string}>;searchParams:Promise<{page?:string;kind?:string;q?:string}>};
-export async function generateMetadata({params}:P){const d=(await departments()).find(x=>x.slug===(await params).department);return {title:(d?.name||'Department')+' · MREM Digital Learning Library'}}
+export async function generateMetadata({params}:P){const {department}=await params;const d=(await departments()).find(x=>x.slug===department);return {title:(d?.name||'Department')+' · MREM Digital Learning Library'}}
 export default async function Department({params,searchParams}:P){
  const {department}=await params,sp=await searchParams,d=(await departments()).find(x=>x.slug===department);if(!d)notFound();
  const kind=sp.kind==='video'||sp.kind==='web'?sp.kind:'';
