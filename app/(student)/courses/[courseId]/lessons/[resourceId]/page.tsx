@@ -1,41 +1,37 @@
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
-import {ArrowLeft,ChevronLeft,ChevronRight} from 'lucide-react';
-import {Crumbs,courseName,nice} from '@/components/lms/ui';
+import {ArrowLeft,ChevronLeft,ChevronRight,GraduationCap} from 'lucide-react';
 import Viewer,{DownloadLink} from '@/components/lms/Viewer';
 import {course,lesson,offeringLabel,resources} from '@/lib/campus-catalog';
-
+import {XpBreadcrumb,XpResourceLine,courseTitle,number} from '@/components/lms/LiveExperienceParts';
 type P={params:Promise<{courseId:string;resourceId:string}>};
-export async function generateMetadata({params}:P){const {courseId,resourceId}=await params;const l=await lesson(courseId,resourceId);
- return {title:(l?l.resource.title||l.resource.name:'Lesson')+' · MREM Digital Learning Library'}}
-
-/** One learning resource at its own URL: viewer across the full width, Previous / Next within the course. */
+export async function generateMetadata({params}:P){const {courseId,resourceId}=await params,l=await lesson(courseId,resourceId);return {title:(l?.resource.title||l?.resource.name||'Lesson')+' · MREM Digital Learning Library'}}
 export default async function Lesson({params}:P){
  const {courseId,resourceId}=await params;
- const [c,l]=await Promise.all([course(courseId),lesson(courseId,resourceId)]);
- if(!c||!l)notFound();
+ const [c,l]=await Promise.all([course(courseId),lesson(courseId,resourceId)]);if(!c||!l)notFound();
  const r=l.resource,title=r.title||r.name;
- const back='/courses/'+c.code+(l.offering&&l.offering!==c.offerings[0]?.value?'?offering='+encodeURIComponent(l.offering):'');
- const related=l.group==='video'?[...await resources(c.code,l.offering,'pdf',1,6),...await resources(c.code,l.offering,'document',1,6)].slice(0,6):[];
- const [previous,next]=await Promise.all([l.prev?lesson(c.code,l.prev):Promise.resolve(null),l.next?lesson(c.code,l.next):Promise.resolve(null)]);
- const previousLabel=previous?.resource.title||previous?.resource.name||'Previous lesson';
- const nextLabel=next?.resource.title||next?.resource.name||'Next lesson';
- return <>
-  <div className="lesson-head"><div style={{minWidth:0}}>
-   <Crumbs items={[['Home','/'],...(c.department?[[c.department,'/departments/'+c.deptSlug] as [string,string]]:[]),[courseName(c),back],[title]]}/>
-   <h1>{title}</h1>
-   <div className="meta">{[r.title?r.name:'',offeringLabel(l.offering||null),nice(l.position)+' of '+nice(l.count),r.titleSource?'Title: '+r.titleSource:''].filter(Boolean).join(' · ')}</div>
-  </div></div>
-  <Viewer r={{id:r.id,name:r.name,ext:r.ext,size:r.size,title}}/>
-  <div className="lesson-nav">
-   <Link className="btn btn-ghost" href={back}><ArrowLeft size={16}/> Back to course</Link>
+ const base='/courses/'+c.code;
+ const back=base+(l.offering&&l.offering!==c.offerings[0]?.value?'?offering='+encodeURIComponent(l.offering):'');
+ const [prev,next]=await Promise.all([l.prev?lesson(c.code,l.prev):Promise.resolve(null),l.next?lesson(c.code,l.next):Promise.resolve(null)]);
+ const prevName=prev?.resource.title||prev?.resource.name||'Back to course';
+ const nextName=next?.resource.title||next?.resource.name||'Back to course';
+ const related=l.group==='video'?[...await resources(c.code,l.offering,'pdf',1,5),...await resources(c.code,l.offering,'document',1,5)].slice(0,6):[];
+ return <div className="xp-container xp-inner xp-study">
+  <XpBreadcrumb links={[{text:'Discover',href:'/'},{text:c.department||'Courses',href:c.deptSlug?'/departments/'+c.deptSlug:'/courses'},{text:courseTitle(c),href:back},{text:title}]}/>
+  <div className="xp-study-heading"><div><span className="xp-eyebrow">LEARNING WORKSPACE · {offeringLabel(l.offering||null)}</span><h1>{title}</h1>
+   <p><GraduationCap size={16}/>{courseTitle(c)} · Lesson {number(l.position)} of {number(l.count)}</p></div>
    <DownloadLink r={{id:r.id,name:r.name,ext:r.ext,size:r.size,title}}/>
-   <span className="spacer"/>
-   <Link className="btn btn-ghost" href={l.prev?`/courses/${c.code}/lessons/${l.prev}`:back} aria-disabled={!l.prev}><ChevronLeft size={16}/> <span className="lesson-name-link"><small>Previous lesson</small>{l.prev?previousLabel:"Back to course"}</span></Link>
-   <Link className="btn btn-primary" href={l.next?`/courses/${c.code}/lessons/${l.next}`:back} aria-disabled={!l.next}><span className="lesson-name-link"><small>Next lesson</small>{l.next?nextLabel:"Back to course"}</span><ChevronRight size={16}/></Link>
   </div>
-  {related.length>0&&<section className="sec"><div className="sec-head"><div><span className="eyebrow">Study materials</span><h2 className="h-sec">From this course</h2></div></div>
-   <div className="list">{related.map(x=><Link key={x.id} className="row" href={`/courses/${c.code}/lessons/${x.id}`}><span className="row-n">{x.ext.replace('.','').toUpperCase().slice(0,4)}</span>
-    <span className="row-t"><strong>{x.title||x.name}</strong></span></Link>)}</div></section>}
- </>;
+  <div className="xp-viewer xp-live-viewer"><Viewer r={{id:r.id,name:r.name,ext:r.ext,size:r.size,title}}/></div>
+  <div className="xp-viewer-description"><div><span className="xp-eyebrow">CURRENT LEARNING RESOURCE</span><h2>{title}</h2>
+   <p>{[r.title?r.name:'',r.titleSource||'',offeringLabel(l.offering||null)].filter(Boolean).join(' · ')}</p>
+  </div><Link href={back}>All lessons <ArrowLeft size={16}/></Link></div>
+  <div className="xp-lesson-nav">
+   <Link href={l.prev?base+'/lessons/'+l.prev:back}><ChevronLeft size={17}/><span className="xp-adjacent-label"><small>{l.prev?'Previous lesson':'Back to course'}</small><strong>{prevName}</strong></span></Link>
+   <Link href={l.next?base+'/lessons/'+l.next:back}><span className="xp-adjacent-label"><small>{l.next?'Next lesson':'Back to course'}</small><strong>{nextName}</strong></span><ChevronRight size={17}/></Link>
+  </div>
+  {related.length>0&&<section className="xp-lessons-shortcut"><span className="xp-eyebrow">RELATED STUDY MATERIALS</span>
+   <div className="xp-related-resources">{related.map(x=><XpResourceLine key={x.id} id={x.id} code={c.code} title={x.title||x.name} index={x.ext.slice(1).toUpperCase().slice(0,4)}/>)}</div>
+  </section>}
+ </div>;
 }
