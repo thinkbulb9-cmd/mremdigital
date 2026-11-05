@@ -39,7 +39,7 @@ export default async function Home(){
    <div className="xp-courses-grid">{featured.map(c=><XpCourseCard key={c.code} c={c}/>)}</div>
   </section>}
   {web.length>0&&<section className="xp-container xp-section">
-   <XpSectionHeading eyebrow="WEB-BASED LEARNING" title="Explore web courses." description="Rendered HTML materials organized by verified academic subject." href="/web-courses" more="Browse web courses"/>
+   <XpSectionHeading eyebrow="WEB-BASED LEARNING" title="Explore web courses." description="Rendered HTML materials organized by academic subject." href="/web-courses" more="Browse web courses"/>
    <div className="xp-courses-grid">{web.map(c=><XpCourseCard key={c.code} c={c} web/>)}</div>
   </section>}
   <section className="xp-container xp-section"><LiveAnnouncement/></section>

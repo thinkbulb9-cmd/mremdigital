@@ -1,7 +1,7 @@
 # MREM LMS — Version 3 design connected to the existing campus catalogue
 
 **Review branch:** `ui/experience-refresh-preview`  
-**Status:** Code integration and sandbox regression tests passed. **Not deployed to the college Windows Server; not merged into `main`.**
+**Status:** Released in `main` as v1.1.0 and running on the college Windows Server since 3 November 2026.
 
 ## What is implemented
 
@@ -16,8 +16,6 @@ The following routes use the actual campus database instead of UI demo arrays:
 - `/courses/[courseId]/lessons/[resourceId]` — secure inline viewer with real original resource, verified lesson name and named previous/next links
 - `/web-courses`, `/web-courses/[department]`, `/web-courses/[department]/[courseId]` and `.../pages/[resourceId]` — real NPTEL Web Course classification and safe rendered HTML pages
 - `/study-materials` — real approved documents and PDFs
-
-`/ux-preview` continues to be a **separate demonstration** with clearly labeled illustrative examples. It does not access the academic archive.
 
 The frontend never receives source-drive paths; it links to indexed resource IDs, with the existing streaming and publication rules unchanged. The app supports whichever authorized storage sources the server currently has registered (including E:, F:, G:, H:).
 
@@ -47,7 +45,7 @@ git fetch origin
 First protect all uncommitted local work and verify the exact current branch. If the working tree is clean and its contents have been preserved, check out the review branch using the local team's standard safe Git workflow:
 
 ```powershell
-git switch --track origin/ui/experience-refresh-preview
+git switch main
 npm install
 npm run typecheck
 npm run test:stream
@@ -70,13 +68,9 @@ Verified in a fresh Vercel sandbox from the review branch:
 - TypeScript compilation: pass
 - Next.js production build: pass
 - Range-stream, HTML legacy, NPTEL reconciliation tests: **30/30 pass**
-- `/`, `/departments`, `/courses`, `/video-courses`, `/web-courses`, `/study-materials`, `/ux-preview`: HTTP 200 in off-campus mode
+- `/`, `/departments`, `/courses`, `/video-courses`, `/web-courses`, `/study-materials`: HTTP 200 in off-campus mode
 - No database connection attempts when campus mode is disabled
 
-**Not verified:** Actual Windows Server availability, contents on E:/F:/G:/H:, real PostgreSQL row totals, original MP4/PDF/HTML playback, performance with campus traffic, and final LAN URL.
+The sandbox could not check the server itself. On the college server (5 November 2026), the home, department and web course pages, reads from E:, F:, G: and H:, and images inside web courses were confirmed at `http://172.16.0.160`. Performance under full campus traffic is not yet measured.
 
 Never treat Vercel demo results as proof of on-premises deployment. Never put original media, secrets or private file inventories in GitHub.
-
-## Approval
-
-Review the design and source on this branch. Only merge into `main` and deploy locally once the college server's working tree is protected and real-file smoke tests pass.
